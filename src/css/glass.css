@@ -329,8 +329,10 @@ body.light-mode .mobile-select-sheet::before { background: rgba(20, 30, 50, 0.22
    Glass off — plain black & white themes. Vars do most of the work;
    the explicit rules below kill blur, sheen and the aurora.
    ===================================================================== */
-body.glass-off::before,
-body.glass-off::after { display: none; }
+/* The aurora is independent of the glass: aurora-off hides it in any mode,
+   including glass-off + aurora-on (plain panels over drifting color) */
+body.aurora-off::before,
+body.aurora-off::after { display: none; }
 html:has(body.glass-off) { background: #000; background-image: none; }
 html:has(body.glass-off.light-mode) { background: #f5f5f5; }
 body.glass-off {
@@ -346,7 +348,7 @@ body.glass-off {
     --glass-shadow-card: 0 2px 6px rgba(0, 0, 0, 0.2);
     --input-well: #1a1a1a;
     --menu-bg: #111;
-    background: #000;
+    background: transparent;
 }
 body.glass-off.light-mode {
     --bg: #f5f5f5;
@@ -357,7 +359,7 @@ body.glass-off.light-mode {
     --glass-shadow-card: 0 2px 6px rgba(0, 0, 0, 0.1);
     --input-well: #ffffff;
     --menu-bg: #ffffff;
-    background: #f5f5f5;
+    background: transparent;
 }
 body.glass-off .import-section,
 body.glass-off .filter-section,

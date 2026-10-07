@@ -1,0 +1,62 @@
+/* =====================================================================
+   Motion — hand-rolled GSAP-style springs. No library, just curves:
+   --spring-pop   back-out overshoot for pop-ins (dropdowns)
+   --spring-soft  gentle overshoot for large surfaces (sheet)
+   --ease-out-expo  long deceleration for entrances / staggering
+   ===================================================================== */
+
+:root {
+    --spring-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --spring-soft: cubic-bezier(0.22, 1.1, 0.32, 1);
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ---------- Custom select dropdown ---------- */
+.custom-select-menu { transform-origin: top center; }
+.custom-select.open .custom-select-menu { animation: lg-menu-in 0.3s var(--spring-pop); }
+.custom-select.closing .custom-select-menu { display: block; animation: lg-menu-out 0.17s ease-in forwards; }
+@keyframes lg-menu-in {
+    from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+}
+@keyframes lg-menu-out {
+    to { opacity: 0; transform: translateY(-6px) scale(0.97); }
+}
+
+/* ---------- Mobile bottom sheet: spring slide + staggered items ---------- */
+.mobile-select-sheet { transition: transform 0.5s var(--spring-soft); }
+.lg-enter-item { animation: lg-item-in 0.35s var(--ease-out-expo) backwards; }
+@keyframes lg-item-in {
+    from { opacity: 0; transform: translateY(10px); }
+}
+
+/* ---------- Tab panels ---------- */
+.tab-panel.active { animation: lg-fade-up 0.3s var(--ease-out-expo); }
+@keyframes lg-fade-up {
+    from { opacity: 0; transform: translateY(8px); }
+}
+
+/* ---------- Schedule: staggered card / header entrances ---------- */
+.lg-enter {
+    animation: lg-enter 0.5s var(--ease-out-expo) backwards;
+    animation-delay: calc(var(--lg-i, 0) * 32ms);
+}
+/* Current-lesson cards must keep their glow — stack it after the entrance */
+.lesson-card.current-lesson.lg-enter {
+    animation: lg-enter 0.5s var(--ease-out-expo) backwards,
+               pulse-glow 2s ease-in-out infinite;
+    animation-delay: calc(var(--lg-i, 0) * 32ms),
+                     calc(var(--lg-i, 0) * 32ms + 0.5s);
+}
+@keyframes lg-enter {
+    from { opacity: 0; transform: translateY(14px) scale(0.985); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lg-enter,
+    .lesson-card.current-lesson.lg-enter,
+    .lg-enter-item,
+    .tab-panel.active,
+    .custom-select.open .custom-select-menu,
+    .custom-select.closing .custom-select-menu { animation: none; }
+    .mobile-select-sheet { transition-duration: 0.01s; }
+}

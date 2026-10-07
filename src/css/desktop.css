@@ -1,0 +1,42 @@
+/* =====================================================================
+   Desktop layout — two columns at >= 1024px.
+
+   Sidebar (Settings + Filters) sticks beside the schedule so filter
+   controls stay reachable while scrolling a long week. It scrolls
+   internally if opened taller than the viewport. Below the breakpoint
+   the wrappers are plain blocks and the page stacks exactly as before.
+   ===================================================================== */
+
+@media (min-width: 1024px) {
+    body { padding: 28px 28px 20px; }
+    .container { max-width: 1280px; }
+    .site-footer { max-width: 1280px; }
+
+    .app-columns {
+        display: grid;
+        grid-template-columns: 370px minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+    }
+    .sidebar {
+        position: sticky;
+        top: 28px;
+        max-height: calc(100vh - 56px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding-right: 4px; /* clearance for the scrollbar */
+    }
+    .sidebar::-webkit-scrollbar { width: 6px; }
+    .sidebar::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.16);
+        border-radius: 3px;
+    }
+    body.light-mode .sidebar::-webkit-scrollbar-thumb { background: rgba(20, 30, 50, 0.18); }
+
+    /* Wider schedule column: taller rows read better on big screens and
+       compare mode gets real room for both of its columns */
+    .period-grid { --period-height: 84px; gap: 14px; }
+    .period-grid-compare { gap: 14px 12px; }
+    .lesson-card { border-radius: 16px; }
+    .day-header, .compare-day-header { font-size: 0.9rem; }
+}

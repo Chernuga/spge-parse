@@ -12,7 +12,7 @@ import {
     progressWrap, progressFill, fetchOnlineBtn, onlineProgressWrap,
     onlineProgressFill, onlineDownloadCombinedBtn, onlineCopyCombinedBtn,
     onlineDownloadRecoloredBtn, urlInputs, tabBtns, tabPanels, setStatus,
-    settingsSection, settingsToggle, glassToggle
+    settingsSection, settingsToggle, glassToggle, auroraToggle
 } from './dom.js';
 import { getCurrentWeekType } from './utils.js';
 import { initTheme, setTheme } from './theme.js';
@@ -35,19 +35,71 @@ themeToggle.addEventListener('click', () => {
     else setTheme('light');
 });
 
-// ---------- Settings panel ----------
+// ---------- Settings panel (animated accordion) ----------
+const SETTINGS_CURVE = 'cubic-bezier(0.22, 1, 0.3, 1)';
 function setSettingsOpen(open) {
-    settingsSection.classList.toggle('open', open);
+    const el = settingsSection;
+    clearTimeout(el._animTimer);
     settingsToggle.classList.toggle('open', open);
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        el.classList.toggle('open', open);
+        el.style.cssText = '';
+        return;
+    }
+    if (open) {
+        el.classList.add('open');
+        el.style.display = 'block';
+        el.style.overflow = 'hidden';
+        const target = el.scrollHeight;
+        el.style.height = '0px';
+        el.style.opacity = '0';
+        el.style.marginBottom = '0px';
+        el.style.paddingTop = '0px';
+        el.style.paddingBottom = '0px';
+        void el.offsetHeight; // force reflow so the transition runs
+        el.style.transition = `height .42s ${SETTINGS_CURVE}, opacity .3s ease, margin .42s ${SETTINGS_CURVE}, padding .42s ${SETTINGS_CURVE}`;
+        requestAnimationFrame(() => {
+            el.style.height = target + 'px';
+            el.style.opacity = '1';
+            el.style.marginBottom = '16px';
+            el.style.paddingTop = '';
+            el.style.paddingBottom = '';
+        });
+        el._animTimer = setTimeout(() => { el.style.cssText = ''; }, 480);
+    } else {
+        el.style.overflow = 'hidden';
+        el.style.height = el.scrollHeight + 'px';
+        el.style.opacity = '1';
+        el.style.marginBottom = '16px';
+        void el.offsetHeight;
+        el.style.transition = `height .38s ${SETTINGS_CURVE}, opacity .26s ease, margin .38s ${SETTINGS_CURVE}, padding .38s ${SETTINGS_CURVE}`;
+        requestAnimationFrame(() => {
+            el.style.height = '0px';
+            el.style.opacity = '0';
+            el.style.marginBottom = '0px';
+            el.style.paddingTop = '0px';
+            el.style.paddingBottom = '0px';
+        });
+        el._animTimer = setTimeout(() => {
+            el.classList.remove('open');
+            el.style.cssText = '';
+        }, 440);
+    }
 }
 settingsToggle.addEventListener('click', () => setSettingsOpen(!settingsSection.classList.contains('open')));
 
-// ---------- Liquid Glass toggle ----------
+// ---------- Liquid Glass + Aurora toggles ----------
 function applyGlass(enabled) {
     document.body.classList.toggle('glass-off', !enabled);
     localStorage.setItem('glass', enabled ? 'on' : 'off');
 }
 glassToggle.addEventListener('change', () => applyGlass(glassToggle.checked));
+
+function applyAurora(enabled) {
+    document.body.classList.toggle('aurora-off', !enabled);
+    localStorage.setItem('aurora', enabled ? 'on' : 'off');
+}
+auroraToggle.addEventListener('change', () => applyAurora(auroraToggle.checked));
 
 // ---------- Week indicator ----------
 function updateWeekIndicator() {
@@ -254,6 +306,10 @@ const glassSaved = localStorage.getItem('glass');
 const glassOn = glassSaved !== 'off';
 glassToggle.checked = glassOn;
 applyGlass(glassOn);
+
+const auroraOn = localStorage.getItem('aurora') !== 'off';
+auroraToggle.checked = auroraOn;
+applyAurora(auroraOn);
 
 initTheme();
 loadFromStorage();

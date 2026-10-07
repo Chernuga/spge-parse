@@ -1,7 +1,8 @@
 # Schedule Viewer
 
 A period-grid schedule viewer: import schedules as text reports or school
-PDFs, filter by class / teacher / room, compare two schedules side by side.
+PDFs, filter by class / teacher / room, compare two schedules side by side,
+with live current-lesson markers and week auto-detection.
 
 The source is split into modular files; **the build output is a single,
 self-contained `dist/index.html`** — same delivery model as the original
@@ -19,6 +20,23 @@ bun run preview    # serve the built file locally
 To use the "Online" tab locally, also run `netlify dev` — the Vite dev
 server proxies `/api/*` to it (see `vite.config.js`).
 
+## Features
+
+- **Import**: paste/load text reports, convert local PDFs, or fetch grade
+  PDFs through a Netlify function (CORS-free proxy with retries)
+- **Views**: class / teacher / room filters, A|B group and week toggles,
+  side-by-side schedule compare mode
+- **Live indicators**: current lesson highlight, current-time line, ISO
+  week auto-detection
+- **Liquid Glass UI**: drifting aurora light behind translucent frosted
+  panels, spring-based animations, dark and light themes
+- **Plain themes**: Liquid Glass and the aurora background are separate
+  toggles (Settings → Appearance) — plain black & white with or without
+  the colorful background
+- **Responsive**: two-column desktop layout (sticky filter sidebar +
+  wide schedule area) at ≥1024px, mobile layout with bottom-sheet
+  selects below that
+
 ## Structure
 
 ```
@@ -34,9 +52,11 @@ src/parse.js          report parsing, class sorting, report generation
 src/storage.js        localStorage persistence (data + filters)
 src/render.js         filtering + period-grid rendering
 src/pdf.js            PDF → SVG → report pipeline (pdf.js, bundled)
-src/css/              base / components / schedule styles
+src/css/              base / components / schedule / glass / motion /
+                      desktop styles (import order = cascade order)
 functions/fetch-pdf.js  Netlify function (CORS-free PDF proxy)
 netlify.toml          build command (bun run build), publish dir: dist
+CLAUDE.md             agent context: gotchas, conventions, verify workflow
 ```
 
 ## Notes
@@ -46,3 +66,4 @@ netlify.toml          build command (bun run build), publish dir: dist
   (it cannot be inlined into a single HTML file).
 - Deploying on Netlify: `netlify.toml` builds with `bun run build` and
   publishes `dist/`, with `/api/*` redirected to the function.
+- Made by Chernuga.

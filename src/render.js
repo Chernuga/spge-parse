@@ -351,6 +351,15 @@ export function renderCompareDay(dayIdx, lessonsA, lessonsB, type, currentDay, c
     return html;
 }
 
+// ---------- Staggered entrance for rendered elements ----------
+function animateIn() {
+    const els = scheduleSection.querySelectorAll('.day-header, .compare-day-header, .lesson-card, .current-time-line');
+    els.forEach((el, i) => {
+        el.style.setProperty('--lg-i', Math.min(i, 14));
+        el.classList.add('lg-enter');
+    });
+}
+
 // ---------- Main render ----------
 export function renderSchedule() {
     const type = state.currentFilter.type;
@@ -378,6 +387,7 @@ export function renderSchedule() {
         }
         if (html === '') html = '<div class="empty-state">No lessons match the current filters.</div>';
         scheduleSection.innerHTML = html;
+        animateIn();
         requestAnimationFrame(adjustDetailsLayout);
         return;
     } else {
@@ -393,6 +403,7 @@ export function renderSchedule() {
         }
         if (html === '') html = '<div class="empty-state">No lessons match the current filters.</div>';
         scheduleSection.innerHTML = html;
+        animateIn();
         requestAnimationFrame(adjustDetailsLayout);
         return;
     }

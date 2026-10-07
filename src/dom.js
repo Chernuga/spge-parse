@@ -23,6 +23,7 @@ export const themeToggle = document.getElementById('themeToggle');
 export const settingsSection = document.getElementById('settingsSection');
 export const settingsToggle = document.getElementById('settingsToggle');
 export const glassToggle = document.getElementById('glassToggle');
+export const auroraToggle = document.getElementById('auroraToggle');
 
 export const selectPdfBtn = document.getElementById('selectPdfBtn');
 export const pdfFilesInput = document.getElementById('pdfFiles');

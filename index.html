@@ -14,6 +14,8 @@
         <h2>📋 Schedule Viewer</h2>
         <button type="button" id="settingsToggle" class="theme-toggle settings-pill">⚙️ Settings<span class="settings-caret">▾</span></button>
     </div>
+    <div class="app-columns">
+    <aside class="sidebar">
     <div class="settings-section" id="settingsSection">
         <div class="settings-body">
             <div class="settings-group-title">Import Data</div>
@@ -73,7 +75,10 @@
                 <div class="compare-toggle-row">
                     <label><input type="checkbox" id="glassToggle" checked> ✨ Liquid Glass</label>
                 </div>
-                <div class="note">Turn off for the plain black &amp; white themes.</div>
+                <div class="compare-toggle-row">
+                    <label><input type="checkbox" id="auroraToggle" checked> 🌌 Aurora background</label>
+                </div>
+                <div class="note">Turn Liquid Glass off for plain themes — keep the aurora on for a colorful plain background.</div>
             </div>
         </div>
     </div>
@@ -124,9 +129,12 @@
             <option value="B">Week B</option>
         </select>
     </div>
-
+    </aside>
+    <main class="main-col">
     <!-- Schedule output -->
     <div id="scheduleSection" class="schedule-section" style="display: none;"></div>
+    </main>
+    </div>
 </div>
 <footer class="site-footer">This website was entirely made by Chernuga.</footer>
 

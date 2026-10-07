@@ -69,6 +69,11 @@ function openMobileSheet(container) {
             if (sel) sel.scrollIntoView({ block: 'center' });
         });
     }
+    // Staggered entrance for the sheet items
+    Array.from(m.listEl.children).forEach((item, i) => {
+        item.style.animationDelay = Math.min(i * 30, 210) + 'ms';
+        item.classList.add('lg-enter-item');
+    });
     requestAnimationFrame(() => {
         m.backdrop.classList.add('open');
         m.sheet.classList.add('open');
@@ -174,8 +179,12 @@ export function refreshAllCustomSelects() {
 
 export function closeAllCustomSelects() {
     document.querySelectorAll('.custom-select.open').forEach(el => {
-        el.classList.remove('open');
         if (el._trigger) el._trigger.setAttribute('aria-expanded', 'false');
+        el.classList.remove('open');
+        // Play the closing animation, then drop the class once it's done
+        el.classList.add('closing');
+        clearTimeout(el._closeTimer);
+        el._closeTimer = setTimeout(() => el.classList.remove('closing'), 200);
     });
 }
 
