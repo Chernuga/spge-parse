@@ -1,0 +1,1951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+<title>Schedule Viewer – Period Grid</title>
+<style>
+    :root {
+        --bg: #000; --surface: #111; --surface2: #1a1a1a; --border: #333;
+        --text: #fff; --text-muted: #aaa; --text-secondary: #ccc;
+        --input-bg: #1a1a1a; --input-border: #444;
+        --card-bg: #000; --card-border: #555;
+        --btn-bg: #2a2a2a; --btn-border: #555;
+        --accent: #2563eb; --accent-hover: #1d4ed8; --green: #22c55e;
+        --blue-bg: rgba(37,99,235,0.15); --green-bg: rgba(34,197,94,0.15);
+        --day-header-border: #333;
+        --schedule-label-a-color: #93c5fd; --schedule-label-b-color: #86efac;
+    }
+    body.light-mode {
+        --bg: #f5f5f5; --surface: #ffffff; --surface2: #f0f0f0; --border: #ddd;
+        --text: #111; --text-muted: #666; --text-secondary: #333;
+        --input-bg: #ffffff; --input-border: #ccc;
+        --card-bg: #ffffff; --card-border: #ddd;
+        --btn-bg: #e0e0e0; --btn-border: #bbb;
+        --blue-bg: #e8f0fe; --green-bg: #e8f5e9;
+        --day-header-border: #ccc;
+        --schedule-label-a-color: #1e40af; --schedule-label-b-color: #166534;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+        background: var(--bg); color: var(--text);
+        font-family: 'Inter', system-ui, sans-serif;
+        padding: 16px 12px; min-height: 100vh;
+        display: flex; flex-direction: column; align-items: center;
+        transition: background 0.3s, color 0.3s;
+    }
+    .container { width: 100%; max-width: 480px; }
+    .import-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .import-header h2 { font-size: 1.4rem; font-weight: 600; color: var(--text); margin: 0; }
+    .theme-toggle { background: var(--btn-bg); border: 1px solid var(--btn-border); color: var(--text); border-radius: 20px; padding: 4px 12px; font-size: 0.8rem; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+    .theme-toggle:hover { background: var(--accent-hover); color: #fff; }
+
+    .import-section { background: var(--surface); border-radius: 12px; padding: 16px; margin-bottom: 16px; border: 1px solid var(--border); transition: background 0.3s, border-color 0.3s; }
+    .tab-row { display: flex; gap: 0; margin-bottom: 14px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+    .tab-btn { flex: 1; background: var(--surface2); color: var(--text-muted); border: none; padding: 10px 6px; font-weight: 600; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; white-space: nowrap; border-right: 1px solid var(--border); }
+    .tab-btn:last-child { border-right: none; }
+    .tab-btn.active { background: var(--accent); color: #fff; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    textarea, input[type="url"] {
+        width: 100%; background: var(--input-bg); border: 1px solid var(--input-border);
+        border-radius: 8px; color: var(--text); padding: 12px; font-family: monospace;
+        font-size: 13px; line-height: 1.4; margin-bottom: 8px; resize: vertical; min-height: 120px;
+    }
+    input[type="url"] { min-height: auto; padding: 8px 10px; font-size: 0.8rem; }
+    .file-upload { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+    button { background: var(--btn-bg); color: var(--text); border: 1px solid var(--btn-border); border-radius: 8px; padding: 10px 18px; font-weight: 500; font-size: 0.95rem; cursor: pointer; transition: background 0.2s, border-color 0.2s; }
+    button:active { background: var(--accent-hover); }
+    .btn-primary { background: var(--accent); border-color: var(--accent); font-weight: 600; color: #fff; }
+    .btn-primary:disabled { background: #666; border-color: #777; color: #ccc; cursor: not-allowed; }
+    .btn-sm { padding: 6px 12px; font-size: 0.78rem; border-radius: 6px; }
+    .url-grid { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+    .url-item { display: flex; align-items: center; gap: 8px; }
+    .url-item label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); width: 50px; flex-shrink: 0; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+
+    /* ===================== Custom Select ===================== */
+    .custom-select {
+        position: relative;
+        font-size: 0.85rem;
+        color: var(--text);
+        min-width: 0;
+    }
+    .custom-select-trigger {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 8px 10px;
+        background: var(--input-bg);
+        border: 1px solid var(--input-border);
+        border-radius: 6px;
+        color: var(--text);
+        cursor: pointer;
+        font: inherit;
+        text-align: left;
+        transition: border-color 0.15s, background 0.15s;
+    }
+    .custom-select-trigger:hover { border-color: var(--accent); }
+    .custom-select-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .custom-select.open .custom-select-trigger { border-color: var(--accent); }
+    .custom-select-label {
+        flex: 1; min-width: 0;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .custom-select-caret {
+        font-size: 0.65rem; opacity: 0.7; flex-shrink: 0;
+        transition: transform 0.15s;
+    }
+    .custom-select.open .custom-select-caret { transform: rotate(180deg); }
+    .custom-select-menu {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0; right: 0;
+        max-height: 260px;
+        overflow-y: auto;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+        z-index: 100;
+        display: none;
+        padding: 4px;
+    }
+    .custom-select.open .custom-select-menu { display: block; }
+    .custom-select-option {
+        padding: 8px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        color: var(--text);
+        font-size: 0.85rem;
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 8px;
+        transition: background 0.1s;
+    }
+    .custom-select-option:hover,
+    .custom-select-option.focused { background: var(--surface2); }
+    .custom-select-option.selected { background: var(--accent); color: #fff; }
+    .custom-select-option.selected::after { content: '✓'; font-size: 0.75rem; }
+    .custom-select-option.empty {
+        color: var(--text-muted);
+        cursor: default;
+        font-style: italic;
+        justify-content: flex-start;
+    }
+    .custom-select-option.empty:hover { background: transparent; }
+
+    /* Layout integration */
+    .schedule-select-row .custom-select { flex: 1 1 0; min-width: 0; }
+    .filter-section > .custom-select { width: 100%; }
+
+    .filter-section {
+        background: var(--surface); border-radius: 12px;
+        padding: 14px 16px; margin-bottom: 16px; border: 1px solid var(--border);
+        display: flex; flex-direction: column; gap: 12px;
+        transition: background 0.3s, border-color 0.3s;
+    }
+    .radio-group { display: flex; gap: 20px; align-items: center; }
+    .radio-group label { display: flex; align-items: center; gap: 6px; font-weight: 500; color: var(--text); cursor: pointer; }
+    .radio-group input[type="radio"] { accent-color: var(--accent); width: 16px; height: 16px; }
+    .compare-toggle-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+    .compare-toggle-row label { display: flex; align-items: center; gap: 8px; font-weight: 500; color: var(--text); cursor: pointer; font-size: 0.9rem; }
+    .compare-toggle-row input[type="checkbox"] { accent-color: var(--green); width: 18px; height: 18px; cursor: pointer; }
+    .compare-badge { display: inline-block; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; letter-spacing: 0.5px; white-space: nowrap; }
+    .compare-badge.sched-a { background: var(--blue-bg); color: var(--schedule-label-a-color); border: 1px solid var(--accent); }
+    .compare-badge.sched-b { background: var(--green-bg); color: var(--schedule-label-b-color); border: 1px solid var(--green); }
+    .schedule-select-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .schedule-select-row .compare-badge { width: 24px; text-align: center; flex-shrink: 0; }
+    #scheduleSelectsContainer { display: flex; flex-direction: column; gap: 8px; }
+    #scheduleSelectsContainer.compare-active { flex-direction: row; align-items: flex-start; }
+    #scheduleSelectsContainer.compare-active .schedule-select-row { flex-direction: column; align-items: stretch; flex: 1 1 0; gap: 4px; }
+    #scheduleSelectsContainer.compare-active .compare-badge { align-self: flex-start; }
+    #scheduleSelectsContainer.compare-active .schedule-select-row .custom-select { flex: 0 0 auto; width: 100%; }
+    .week-indicator { font-size: 0.75rem; color: var(--green); margin-top: -6px; font-weight: 500; display: flex; align-items: center; gap: 4px; }
+    .week-indicator .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: blink-dot 1.5s ease-in-out infinite; }
+    @keyframes blink-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    /* Hidden native selects — kept in DOM so existing JS refs keep working */
+    .hidden-native { display: none !important; }
+
+    /* ===================== Mobile select popup (bottom sheet) ===================== */
+    .mobile-select-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.55);
+        z-index: 900;
+        display: none;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+    .mobile-select-backdrop.open {
+        display: block;
+        opacity: 1;
+    }
+    .mobile-select-sheet {
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        background: var(--surface);
+        color: var(--text);
+        border-top-left-radius: 18px;
+        border-top-right-radius: 18px;
+        box-shadow: 0 -10px 40px rgba(0,0,0,0.55);
+        z-index: 901;
+        max-height: 78vh;
+        display: flex;
+        flex-direction: column;
+        transform: translateY(100%);
+        transition: transform 0.25s ease;
+        padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+    .mobile-select-sheet.open { transform: translateY(0); }
+    .mobile-select-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 14px 14px 12px 18px;
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+    }
+    .mobile-select-title {
+        font-weight: 600;
+        font-size: 1rem;
+        color: var(--text);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
+    }
+    .mobile-select-close {
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        font-size: 1.6rem;
+        line-height: 1;
+        padding: 2px 10px;
+        cursor: pointer;
+        border-radius: 8px;
+        flex-shrink: 0;
+        font-weight: 400;
+    }
+    .mobile-select-close:hover { background: var(--surface2); color: var(--text); }
+    .mobile-select-close:active { background: var(--accent); color: #fff; }
+    .mobile-select-list {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 8px 10px 14px;
+        flex: 1 1 auto;
+        overscroll-behavior: contain;
+    }
+    .mobile-select-item {
+        padding: 15px 16px;
+        border-radius: 10px;
+        font-size: 1rem;
+        color: var(--text);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        transition: background 0.1s;
+    }
+    .mobile-select-item:active { background: var(--surface2); }
+    .mobile-select-item.selected {
+        background: var(--accent);
+        color: #fff;
+        font-weight: 600;
+    }
+    .mobile-select-item.selected::after {
+        content: '✓';
+        font-size: 0.95rem;
+        flex-shrink: 0;
+    }
+    .mobile-select-item.empty {
+        color: var(--text-muted);
+        font-style: italic;
+        cursor: default;
+        justify-content: center;
+    }
+    .mobile-select-item.empty::after { content: none; }
+
+    .schedule-section { background: var(--surface); border-radius: 12px; padding: 16px; border: 1px solid var(--border); transition: background 0.3s, border-color 0.3s; }
+    .day-header { font-size: 1.05rem; font-weight: 600; margin: 14px 0 8px 0; padding-bottom: 4px; border-bottom: 1px solid var(--day-header-border); color: var(--text-secondary); text-transform: uppercase; }
+    .day-header:first-child { margin-top: 0; }
+    .compare-day-header { font-size: 1.05rem; font-weight: 600; margin: 0 0 8px 0; padding-bottom: 4px; border-bottom: 1px solid var(--day-header-border); color: var(--text-secondary); text-transform: uppercase; }
+    .compare-day-row { margin-bottom: 20px; }
+
+    /* ===== Lesson card ===== */
+    .lesson-card {
+        background: var(--card-bg); border: 1px solid var(--card-border);
+        border-radius: 8px; color: var(--text);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        position: relative; transition: all 0.3s ease;
+        scroll-margin-top: 60px;
+    }
+    .lesson-card.current-lesson { border-left: 4px solid var(--lesson-color, #fbbf24) !important; animation: pulse-glow 2s ease-in-out infinite; }
+    .lesson-card.current-lesson::before { content: '▶'; position: absolute; left: 3px; top: 50%; transform: translateY(-50%); color: var(--lesson-color, #fbbf24); font-size: 0.75rem; animation: arrow-text-pulse 2s ease-in-out infinite; }
+    @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 6px var(--lesson-color), 0 0 12px var(--lesson-color), 0 2px 6px rgba(0,0,0,0.2); } 50% { box-shadow: 0 0 12px var(--lesson-color), 0 0 24px var(--lesson-color), 0 2px 6px rgba(0,0,0,0.2); } }
+    @keyframes arrow-text-pulse { 0%, 100% { text-shadow: 0 0 6px var(--lesson-color), 0 0 12px var(--lesson-color); } 50% { text-shadow: 0 0 12px var(--lesson-color), 0 0 24px var(--lesson-color); } }
+
+    /* ===== Current-time line ===== */
+    .current-time-line {
+        position: relative; height: 6px;
+        background: #fbbf24; border: none; border-radius: 3px;
+        animation: pulse-line 2s ease-in-out infinite;
+        scroll-margin-top: 60px;
+        margin: 18px 0 18px 24px;
+    }
+    .current-time-line::before { content: '▶'; position: absolute; left: -20px; top: 50%; transform: translateY(-50%); color: #fbbf24; font-size: 0.85rem; animation: arrow-text-pulse-line 2s ease-in-out infinite; }
+    @keyframes pulse-line { 0%, 100% { box-shadow: 0 0 8px #fbbf24, 0 0 16px #fbbf24; } 50% { box-shadow: 0 0 16px #fbbf24, 0 0 32px #fbbf24; } }
+    @keyframes arrow-text-pulse-line { 0%, 100% { text-shadow: 0 0 6px #fbbf24, 0 0 12px #fbbf24; } 50% { text-shadow: 0 0 12px #fbbf24, 0 0 24px #fbbf24; } }
+
+    /* ===== Period-based grid ===== */
+    .period-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        grid-template-rows: repeat(var(--period-count, 8), var(--period-height, 74px));
+        gap: 12px;
+        width: 100%;
+    }
+    .period-grid-compare {
+        grid-template-columns: 1fr 1fr;
+        gap: 12px 8px;
+    }
+
+    .period-cell { position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 4px; }
+    .period-cell > .lesson-card {
+        width: 100%; height: 100%; flex: 1 1 auto; margin-bottom: 0;
+        overflow: hidden; overflow-wrap: break-word;
+        padding: 9px 12px;
+        display: flex; flex-direction: column; justify-content: flex-start;
+    }
+    .lesson-header { display: flex; align-items: baseline; justify-content: flex-start; gap: 8px; margin-bottom: 4px; }
+    .lesson-subject { font-size: 1rem; font-weight: 700; line-height: 1.15; color: inherit; overflow-wrap: break-word; min-width: 0; flex: 0 1 auto; }
+    .lesson-time { font-size: 0.8rem; font-weight: 500; opacity: 0.85; line-height: 1.1; white-space: nowrap; flex: 0 0 auto; font-variant-numeric: tabular-nums; }
+    .lesson-details { display: flex; flex-wrap: wrap; gap: 3px 10px; font-size: 0.78rem; line-height: 1.2; opacity: 0.95; }
+    .lesson-details.stacked { flex-direction: column; align-items: flex-start; gap: 2px; }
+    .lesson-details span { display: flex; align-items: center; gap: 3px; overflow-wrap: break-word; min-width: 0; }
+    .period-cell > .lesson-card.current-lesson { padding-left: 20px; }
+    .period-cell > .lesson-card.current-lesson::before { left: 3px; font-size: 0.75rem; }
+
+    /* ===== Filler card for empty time before the first lesson ===== */
+    .period-cell > .lesson-card.filler-card {
+        background: transparent;
+        border: 1px dashed var(--border);
+        border-radius: 8px;
+        color: var(--text-muted);
+        box-shadow: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        padding: 8px;
+        text-align: center;
+        overflow: hidden;
+        opacity: 0.7;
+    }
+    .filler-card .filler-time {
+        font-size: 0.75rem;
+        font-variant-numeric: tabular-nums;
+        font-weight: 500;
+    }
+    .filler-card .filler-label {
+        font-size: 0.7rem;
+        font-style: italic;
+        opacity: 0.85;
+    }
+
+    /* ===== Marker row ===== */
+    .period-marker {
+        position: relative;
+        align-self: center;
+        z-index: 3;
+        pointer-events: none;
+        min-height: 6px;
+    }
+    .period-marker > .current-time-line {
+        position: absolute;
+        left: 24px;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        margin: 0;
+        height: 6px;
+    }
+    .period-marker > .current-time-line::before { left: -22px; }
+    .period-grid-compare .period-marker > .current-time-line { left: 14px; }
+    .period-grid-compare .period-marker > .current-time-line::before { left: -12px; font-size: 0.7rem; }
+
+    /* Bottom marker placed at the very top of the first period row that
+       follows a column's last lesson (compare mode). Sits flush against
+       the bottom edge of that column's last card. */
+    .period-marker.period-marker-bottom {
+        align-self: start;
+    }
+    .period-marker.period-marker-bottom > .current-time-line {
+        top: 0;
+        transform: translateY(-50%);
+    }
+
+    .current-time-line.bottom-marker { margin: 14px 0 18px 24px; }
+    .bottom-marker-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px 8px;
+        margin-top: 12px;
+        margin-bottom: 6px;
+    }
+    .bottom-marker-cell { position: relative; min-height: 12px; }
+    .bottom-marker-cell .current-time-line { margin: 0 0 0 14px; height: 5px; }
+    .bottom-marker-cell .current-time-line::before { left: -12px; font-size: 0.7rem; }
+
+    @media (max-width: 430px) {
+        .period-grid { --period-height: 80px; gap: 11px; }
+        .period-grid-compare { gap: 11px 6px; }
+        .period-cell > .lesson-card { padding: 7px 9px; display: flex; flex-direction: column; justify-content: flex-start; }
+        .lesson-header { gap: 6px; margin-bottom: 3px; }
+        .lesson-subject { font-size: 0.88rem; }
+        .lesson-time    { font-size: 0.72rem; }
+        .lesson-details { font-size: 0.7rem; gap: 2px 8px; }
+        .period-cell > .lesson-card.current-lesson { padding-left: 16px; }
+        .period-cell > .lesson-card.current-lesson::before { left: 2px; font-size: 0.68rem; }
+        .compare-day-header { font-size: 0.95rem; }
+        .period-marker > .current-time-line { left: 16px; }
+        .period-marker > .current-time-line::before { left: -14px; font-size: 0.7rem; }
+        .period-grid-compare .period-marker > .current-time-line { left: 10px; }
+        .period-grid-compare .period-marker > .current-time-line::before { left: -9px; font-size: 0.6rem; }
+        .filler-card .filler-time { font-size: 0.7rem; }
+        .filler-card .filler-label { font-size: 0.65rem; }
+    }
+
+    .empty-state { text-align: center; padding: 30px; color: var(--text-muted); font-style: italic; }
+    .status-msg { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; min-height: 1.3em; }
+    .status-msg.error { color: #ef4444; font-weight: 500; }
+    .status-msg.success { color: #22c55e; font-weight: 500; }
+    .progress-bar-wrap { width: 100%; height: 4px; background: var(--border); border-radius: 2px; margin-top: 8px; overflow: hidden; display: none; }
+    .progress-bar-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s; width: 0%; }
+    .note { font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; line-height: 1.3; }
+    #selectedPdfNames { color: var(--text-secondary); font-size: 0.8rem; word-break: break-all; }
+
+    .light-mode .lesson-card { box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+    .light-mode .current-time-line { background: #f59e0b; }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="import-header">
+        <h2>📋 Import Schedule</h2>
+        <button id="themeToggle" class="theme-toggle">🌙 Dark</button>
+    </div>
+    <div class="import-section">
+        <div class="tab-row">
+            <button class="tab-btn active" data-tab="text">📝 Text</button>
+            <button class="tab-btn" data-tab="pdf">📄 PDF</button>
+            <button class="tab-btn" data-tab="online">🌐 Online</button>
+        </div>
+        <div class="tab-panel active" id="panelText">
+            <textarea id="reportInput" placeholder="Paste your combined text report here..."></textarea>
+            <div class="file-upload">
+                <input type="file" id="fileInput" accept=".txt">
+                <button id="loadFileBtn" class="btn-primary btn-sm">Load .txt</button>
+            </div>
+            <button id="parseBtn" class="btn-primary" style="width:100%;">Parse & Show Filters</button>
+        </div>
+        <div class="tab-panel" id="panelPdf">
+            <div class="file-upload">
+                <button type="button" id="selectPdfBtn" class="btn-primary" style="width:100%;">📂 Select PDFs</button>
+                <input type="file" id="pdfFiles" multiple accept=".pdf" style="display:none;">
+                <div id="selectedPdfNames"></div>
+            </div>
+            <button id="convertAllBtn" class="btn-primary" style="width:100%;">🔁 Convert PDFs & Load</button>
+            <div class="progress-bar-wrap" id="progressWrap"><div class="progress-bar-fill" id="progressFill"></div></div>
+            <div class="btn-row" style="margin-top:8px;">
+                <button id="downloadCombinedBtn" class="btn-sm" style="display:none;">💾 Download Report</button>
+                <button id="copyCombinedBtn" class="btn-sm" style="display:none;">📋 Copy Report</button>
+                <button id="downloadRecoloredBtn" class="btn-sm" style="display:none;">🎨 Download Recolored SVGs (ZIP)</button>
+            </div>
+        </div>
+        <div class="tab-panel" id="panelOnline">
+            <div class="url-grid">
+                <div class="url-item"><label>8 клас</label><input type="url" id="url8" placeholder="https://..."></div>
+                <div class="url-item"><label>9 клас</label><input type="url" id="url9" placeholder="https://..."></div>
+                <div class="url-item"><label>10 клас</label><input type="url" id="url10" placeholder="https://..."></div>
+                <div class="url-item"><label>11 клас</label><input type="url" id="url11" placeholder="https://..."></div>
+                <div class="url-item"><label>12 клас</label><input type="url" id="url12" placeholder="https://..."></div>
+            </div>
+            <button id="fetchOnlineBtn" class="btn-primary" style="width:100%;">🌐 Fetch PDFs & Process</button>
+            <div class="progress-bar-wrap" id="onlineProgressWrap"><div class="progress-bar-fill" id="onlineProgressFill"></div></div>
+            <div class="note">⚠️ Fetches all grades simultaneously. Retries up to 3 times. New classes are added; existing ones are skipped. Press again to add more grades.</div>
+            <div class="btn-row" style="margin-top:8px;">
+                <button id="onlineDownloadCombinedBtn" class="btn-sm" style="display:none;">💾 Download Report</button>
+                <button id="onlineCopyCombinedBtn" class="btn-sm" style="display:none;">📋 Copy Report</button>
+                <button id="onlineDownloadRecoloredBtn" class="btn-sm" style="display:none;">🎨 Download Recolored SVGs (ZIP)</button>
+            </div>
+        </div>
+        <div id="importStatus" class="status-msg"></div>
+    </div>
+
+    <!-- Filters -->
+    <div id="filterSection" class="filter-section" style="display: none;">
+        <div class="radio-group">
+            <label><input type="radio" name="viewType" value="class" checked> Class</label>
+            <label><input type="radio" name="viewType" value="teacher"> Teacher</label>
+            <label><input type="radio" name="viewType" value="room"> Room</label>
+        </div>
+
+        <div class="compare-toggle-row">
+            <label><input type="checkbox" id="compareToggle"> 🔄 Compare Schedules</label>
+        </div>
+
+        <div id="scheduleSelectsContainer">
+            <div class="schedule-select-row" id="singleScheduleSelect">
+                <span class="compare-badge sched-a">A</span>
+                <div class="custom-select" data-select-id="nameSelect" data-mobile-title="Select"></div>
+                <div class="custom-select group-select" data-select-id="groupSelect" data-mobile-title="Select Group"></div>
+            </div>
+            <div class="schedule-select-row" id="secondScheduleSelect" style="display:none;">
+                <span class="compare-badge sched-b">B</span>
+                <div class="custom-select" data-select-id="nameSelect2" data-mobile-title="Compare with"></div>
+                <div class="custom-select group-select" data-select-id="groupSelect2" data-mobile-title="Select Group"></div>
+            </div>
+        </div>
+
+        <div class="custom-select" data-select-id="weekSelect" data-mobile-title="Select Week"></div>
+        <div id="weekIndicator" class="week-indicator" style="display:none;">
+            <span class="dot"></span> <span id="weekIndicatorText"></span>
+        </div>
+
+        <!-- Hidden native selects (source of truth for the rest of the JS) -->
+        <select id="nameSelect" class="hidden-native"></select>
+        <select id="nameSelect2" class="hidden-native"></select>
+        <select id="groupSelect" class="hidden-native">
+            <option value="A">Group A</option>
+            <option value="B">Group B</option>
+        </select>
+        <select id="groupSelect2" class="hidden-native">
+            <option value="A">Group A</option>
+            <option value="B">Group B</option>
+        </select>
+        <select id="weekSelect" class="hidden-native">
+            <option value="A">Week A</option>
+            <option value="B">Week B</option>
+        </select>
+    </div>
+
+    <!-- Schedule output -->
+    <div id="scheduleSection" class="schedule-section" style="display: none;"></div>
+</div>
+
+<script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://unpkg.com/jszip@3.11.0/dist/jszip.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+
+(function() {
+    // DOM references
+    const reportInput = document.getElementById('reportInput');
+    const fileInput = document.getElementById('fileInput');
+    const loadFileBtn = document.getElementById('loadFileBtn');
+    const parseBtn = document.getElementById('parseBtn');
+    const importStatus = document.getElementById('importStatus');
+    const filterSection = document.getElementById('filterSection');
+    const nameSelect = document.getElementById('nameSelect');
+    const nameSelect2 = document.getElementById('nameSelect2');
+    const secondScheduleSelect = document.getElementById('secondScheduleSelect');
+    const scheduleSelectsContainer = document.getElementById('scheduleSelectsContainer');
+    const compareToggle = document.getElementById('compareToggle');
+    const groupSelect = document.getElementById('groupSelect');
+    const groupSelect2 = document.getElementById('groupSelect2');
+    const weekSelect = document.getElementById('weekSelect');
+    const weekIndicator = document.getElementById('weekIndicator');
+    const weekIndicatorText = document.getElementById('weekIndicatorText');
+    const scheduleSection = document.getElementById('scheduleSection');
+    const viewTypeRadios = document.getElementsByName('viewType');
+    const themeToggle = document.getElementById('themeToggle');
+
+    const selectPdfBtn = document.getElementById('selectPdfBtn');
+    const pdfFilesInput = document.getElementById('pdfFiles');
+    const selectedPdfNames = document.getElementById('selectedPdfNames');
+    const convertAllBtn = document.getElementById('convertAllBtn');
+    const downloadCombinedBtn = document.getElementById('downloadCombinedBtn');
+    const copyCombinedBtn = document.getElementById('copyCombinedBtn');
+    const downloadRecoloredBtn = document.getElementById('downloadRecoloredBtn');
+    const progressWrap = document.getElementById('progressWrap');
+    const progressFill = document.getElementById('progressFill');
+
+    const fetchOnlineBtn = document.getElementById('fetchOnlineBtn');
+    const onlineProgressWrap = document.getElementById('onlineProgressWrap');
+    const onlineProgressFill = document.getElementById('onlineProgressFill');
+    const onlineDownloadCombinedBtn = document.getElementById('onlineDownloadCombinedBtn');
+    const onlineCopyCombinedBtn = document.getElementById('onlineCopyCombinedBtn');
+    const onlineDownloadRecoloredBtn = document.getElementById('onlineDownloadRecoloredBtn');
+    const urlInputs = { 8: document.getElementById('url8'), 9: document.getElementById('url9'), 10: document.getElementById('url10'), 11: document.getElementById('url11'), 12: document.getElementById('url12') };
+
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabPanels = document.querySelectorAll('.tab-panel');
+
+    // Global state
+    let allLessons = [];
+    let currentFilter = { type: 'class', name: '', name2: '', group: 'A', group2: 'A', week: 'A', compareMode: false };
+    let typeFilters = {
+        class:   { name: '', name2: '', group: 'A', group2: 'A', compareMode: false },
+        teacher: { name: '', name2: '', group: 'A', group2: 'A', compareMode: false },
+        room:    { name: '', name2: '', group: 'A', group2: 'A', compareMode: false }
+    };
+    let combinedReportText = '';
+    let globalRecoloredSvgs = [];
+    let weekManuallyChanged = false;
+    let initialScrollDone = false;
+
+    const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    const CLASS_LETTER_ORDER = ['А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ж'];
+    const STORAGE_KEY = 'schedule_viewer_data', FILTER_KEY = 'schedule_viewer_filter';
+
+    const START_TIMES = { 0: '8:00', 1: '8:45', 2: '9:50', 3: '10:35', 4: '11:40', 5: '12:25', 6: '13:30', 7: '14:15' };
+    const END_TIMES   = { 1: '8:45', 2: '9:30', 3: '10:35', 4: '11:20', 5: '12:25', 6: '13:10', 7: '14:15', 8: '15:00' };
+    const MAX_PERIODS = 8;
+
+    const RECT = { minX: 93.6, minY: 110.04, maxX: 830.04, maxY: 565.56 };
+    const TOTAL_WIDTH = RECT.maxX - RECT.minX, TOTAL_HEIGHT = RECT.maxY - RECT.minY;
+    const DAY_HEIGHT = TOTAL_HEIGHT / 5, X_DIV = TOTAL_WIDTH / 8, TOLERANCE = 2.0;
+    const MAIN_SIZES = [10.52602481842041, 21.15945053100586], MAIN_SIZE_TOL = 0.01;
+    const GRID = { xMin: 93.6, xMax: 830.04, yMin: 110.04, yMax: 565.56, cols: 8, rows: 20 };
+    GRID.colW = (GRID.xMax - GRID.xMin) / GRID.cols; GRID.rowH = (GRID.yMax - GRID.yMin) / GRID.rows;
+    const CYR_UPPER = { 'а': 'А', 'б': 'Б', 'в': 'В', 'г': 'Г', 'д': 'Д', 'е': 'Е', 'ж': 'Ж' };
+    function escapeHtml(t) {
+        const m = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+        return t.replace(/[&<>"']/g, c => m[c]);
+    }
+    const MAX_RETRIES = 3, RETRY_DELAY_MS = 2000;
+
+    // ==================== Custom Select widget ====================
+    const MOBILE_POPUP_QUERY = '(max-width: 768px)';
+    function isMobilePopup() {
+        return window.matchMedia(MOBILE_POPUP_QUERY).matches;
+    }
+
+    let _mobileSheet = null;
+    function ensureMobileSheet() {
+        if (_mobileSheet) return _mobileSheet;
+        const backdrop = document.createElement('div');
+        backdrop.className = 'mobile-select-backdrop';
+        const sheet = document.createElement('div');
+        sheet.className = 'mobile-select-sheet';
+        sheet.innerHTML = `
+            <div class="mobile-select-header">
+                <div class="mobile-select-title"></div>
+                <button type="button" class="mobile-select-close" aria-label="Close">×</button>
+            </div>
+            <div class="mobile-select-list" role="listbox"></div>
+        `;
+        backdrop.appendChild(sheet);
+        document.body.appendChild(backdrop);
+        _mobileSheet = {
+            backdrop,
+            sheet,
+            titleEl: sheet.querySelector('.mobile-select-title'),
+            listEl:  sheet.querySelector('.mobile-select-list'),
+            closeBtn: sheet.querySelector('.mobile-select-close')
+        };
+        backdrop.addEventListener('click', (e) => {
+            if (e.target === backdrop) closeMobileSheet();
+        });
+        _mobileSheet.closeBtn.addEventListener('click', closeMobileSheet);
+        return _mobileSheet;
+    }
+    function closeMobileSheet() {
+        if (!_mobileSheet) return;
+        _mobileSheet.backdrop.classList.remove('open');
+        _mobileSheet.sheet.classList.remove('open');
+    }
+    function openMobileSheet(container) {
+        const selectEl = container._selectEl;
+        if (!selectEl) return;
+        const m = ensureMobileSheet();
+        m.titleEl.textContent = container.dataset.mobileTitle || 'Select';
+        m.listEl.innerHTML = '';
+        const opts = Array.from(selectEl.options);
+        if (opts.length === 0) {
+            const item = document.createElement('div');
+            item.className = 'mobile-select-item empty';
+            item.textContent = '-- No entries --';
+            m.listEl.appendChild(item);
+        } else {
+            opts.forEach(opt => {
+                const item = document.createElement('div');
+                item.className = 'mobile-select-item';
+                if (opt.value === selectEl.value) item.classList.add('selected');
+                item.setAttribute('role', 'option');
+                item.textContent = opt.textContent;
+                item.addEventListener('click', () => {
+                    selectEl.value = opt.value;
+                    selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+                    closeMobileSheet();
+                });
+                m.listEl.appendChild(item);
+            });
+            requestAnimationFrame(() => {
+                const sel = m.listEl.querySelector('.mobile-select-item.selected');
+                if (sel) sel.scrollIntoView({ block: 'center' });
+            });
+        }
+        requestAnimationFrame(() => {
+            m.backdrop.classList.add('open');
+            m.sheet.classList.add('open');
+        });
+    }
+
+    function initCustomSelects() {
+        document.querySelectorAll('.custom-select[data-select-id]').forEach(container => {
+            const selectId = container.dataset.selectId;
+            const selectEl = document.getElementById(selectId);
+            if (!selectEl) return;
+
+            container.innerHTML = '';
+
+            const trigger = document.createElement('button');
+            trigger.type = 'button';
+            trigger.className = 'custom-select-trigger';
+            trigger.setAttribute('aria-haspopup', 'listbox');
+            trigger.setAttribute('aria-expanded', 'false');
+
+            const label = document.createElement('span');
+            label.className = 'custom-select-label';
+            trigger.appendChild(label);
+
+            const caret = document.createElement('span');
+            caret.className = 'custom-select-caret';
+            caret.textContent = '▾';
+            trigger.appendChild(caret);
+
+            const menu = document.createElement('div');
+            menu.className = 'custom-select-menu';
+            menu.setAttribute('role', 'listbox');
+
+            container.appendChild(trigger);
+            container.appendChild(menu);
+
+            container._trigger = trigger;
+            container._label = label;
+            container._menu = menu;
+            container._selectEl = selectEl;
+
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (isMobilePopup()) {
+                    closeAllCustomSelects();
+                    openMobileSheet(container);
+                    return;
+                }
+                const wasOpen = container.classList.contains('open');
+                closeAllCustomSelects();
+                if (!wasOpen) {
+                    container.classList.add('open');
+                    trigger.setAttribute('aria-expanded', 'true');
+                }
+            });
+
+            selectEl.addEventListener('change', () => refreshCustomSelect(container));
+
+            refreshCustomSelect(container);
+        });
+    }
+
+    function refreshCustomSelect(container) {
+        const selectEl = container._selectEl;
+        const label = container._label;
+        const menu = container._menu;
+        if (!selectEl || !label || !menu) return;
+
+        menu.innerHTML = '';
+        const opts = Array.from(selectEl.options);
+        if (opts.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'custom-select-option empty';
+            empty.textContent = '-- No entries --';
+            menu.appendChild(empty);
+            label.textContent = '-- No entries --';
+            return;
+        }
+
+        opts.forEach(opt => {
+            const item = document.createElement('div');
+            item.className = 'custom-select-option';
+            if (opt.value === selectEl.value) item.classList.add('selected');
+            item.setAttribute('role', 'option');
+            item.dataset.value = opt.value;
+            item.textContent = opt.textContent;
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectEl.value = opt.value;
+                selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+                closeAllCustomSelects();
+            });
+            menu.appendChild(item);
+        });
+
+        const selectedOpt = selectEl.options[selectEl.selectedIndex];
+        label.textContent = selectedOpt ? selectedOpt.textContent : (opts[0] ? opts[0].textContent : '-- Select --');
+    }
+
+    function refreshAllCustomSelects() {
+        document.querySelectorAll('.custom-select[data-select-id]').forEach(refreshCustomSelect);
+    }
+
+    function closeAllCustomSelects() {
+        document.querySelectorAll('.custom-select.open').forEach(el => {
+            el.classList.remove('open');
+            if (el._trigger) el._trigger.setAttribute('aria-expanded', 'false');
+        });
+    }
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.custom-select')) closeAllCustomSelects();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { closeAllCustomSelects(); closeMobileSheet(); }
+    });
+    window.addEventListener('resize', () => {
+        if (!isMobilePopup()) closeMobileSheet();
+    });
+
+    // ---------- Theme-aware color adjustment ----------
+    function adjustColorForTheme(color) {
+        if (!color) return color;
+        let r, g, b, a = 1;
+        const s = String(color).trim();
+        if (s[0] === '#') {
+            const hex = s.slice(1);
+            if (hex.length === 3) {
+                r = parseInt(hex[0] + hex[0], 16); g = parseInt(hex[1] + hex[1], 16); b = parseInt(hex[2] + hex[2], 16);
+            } else if (hex.length === 6 || hex.length === 8) {
+                r = parseInt(hex.slice(0, 2), 16); g = parseInt(hex.slice(2, 4), 16); b = parseInt(hex.slice(4, 6), 16);
+                if (hex.length === 8) a = parseInt(hex.slice(6, 8), 16) / 255;
+            } else { return color; }
+        } else if (s.startsWith('rgb')) {
+            const m = s.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)/);
+            if (!m) return color;
+            r = parseFloat(m[1]); g = parseFloat(m[2]); b = parseFloat(m[3]);
+            if (m[4] !== undefined) a = parseFloat(m[4]);
+        } else { return color; }
+        const brightness = 0.299 * r + 0.587 * g + 0.114 * b;
+        if (document.body.classList.contains('light-mode')) {
+            const MAX_BRIGHTNESS = 185;
+            if (brightness <= MAX_BRIGHTNESS) return color;
+            const scale = MAX_BRIGHTNESS / brightness;
+            const nr = Math.max(0, Math.min(255, Math.round(r * scale)));
+            const ng = Math.max(0, Math.min(255, Math.round(g * scale)));
+            const nb = Math.max(0, Math.min(255, Math.round(b * scale)));
+            return a < 1 ? `rgba(${nr},${ng},${nb},${a})` : `rgb(${nr},${ng},${nb})`;
+        }
+        const MIN_BRIGHTNESS = 110;
+        if (brightness >= MIN_BRIGHTNESS) return color;
+        const t = (MIN_BRIGHTNESS - brightness) / (255 - brightness);
+        const nr = Math.round(r + (255 - r) * t);
+        const ng = Math.round(g + (255 - g) * t);
+        const nb = Math.round(b + (255 - b) * t);
+        return a < 1 ? `rgba(${nr},${ng},${nb},${a})` : `rgb(${nr},${ng},${nb})`;
+    }
+
+    // ---------- Theme handling ----------
+    function setTheme(theme) {
+        if (theme === 'light') {
+            document.body.classList.add('light-mode');
+            themeToggle.textContent = '☀️ Light';
+            localStorage.setItem('theme', 'light');
+        } else {
+            document.body.classList.remove('light-mode');
+            themeToggle.textContent = '🌙 Dark';
+            localStorage.setItem('theme', 'dark');
+        }
+        if (scheduleSection && scheduleSection.style.display !== 'none'
+            && typeof allLessons !== 'undefined' && allLessons.length > 0) {
+            renderSchedule();
+        }
+    }
+    function initTheme() {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'light') setTheme('light');
+        else setTheme('dark');
+    }
+    themeToggle.addEventListener('click', () => {
+        if (document.body.classList.contains('light-mode')) setTheme('dark');
+        else setTheme('light');
+    });
+
+    // ---------- Utility ----------
+    function getISOWeekNumber(date) { const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())); const dayNum = d.getUTCDay() || 7; d.setUTCDate(d.getUTCDate() + 4 - dayNum); const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1)); return Math.ceil((((d - yearStart) / 86400000) + 1) / 7); }
+    function getCurrentWeekType() { const weekNum = getISOWeekNumber(new Date()); return (weekNum % 2 === 0) ? 'A' : 'B'; }
+    function updateWeekIndicator() {
+        const detectedWeek = getCurrentWeekType();
+        const selectedWeek = weekSelect.value;
+        if (selectedWeek === detectedWeek && !weekManuallyChanged) {
+            weekIndicator.style.display = 'flex';
+            weekIndicatorText.textContent = `Auto-detected: Week ${detectedWeek} (current week)`;
+        } else if (weekManuallyChanged) {
+            weekIndicator.style.display = 'flex';
+            weekIndicatorText.textContent = `Manual selection: Week ${selectedWeek} (auto: Week ${detectedWeek})`;
+        } else {
+            weekIndicator.style.display = 'none';
+        }
+    }
+    function timeToMinutes(timeStr) { if (!timeStr) return -1; const parts = timeStr.split(':'); if (parts.length !== 2) return -1; return parseInt(parts[0]) * 60 + parseInt(parts[1]); }
+    function getCurrentDayIndex() { const jsDay = new Date().getDay(); if (jsDay === 0 || jsDay === 6) return -1; return jsDay - 1; }
+    function getCurrentTimeMinutes() { const now = new Date(); return now.getHours() * 60 + now.getMinutes(); }
+    function getLessonTimeRange(lesson) { const startTime = START_TIMES[lesson.start]; const endTime = END_TIMES[lesson.end]; if (!startTime || !endTime) return null; return { startMinutes: timeToMinutes(startTime), endMinutes: timeToMinutes(endTime) }; }
+    function isLessonCurrent(lesson, currentDay, currentMinutes) { if (lesson.day !== currentDay) return false; const range = getLessonTimeRange(lesson); if (!range) return false; return currentMinutes >= range.startMinutes && currentMinutes < range.endMinutes; }
+
+    // ---------- Persistence ----------
+    function stashCurrentFilter() {
+        const t = currentFilter.type;
+        if (!t || !typeFilters[t]) return;
+        typeFilters[t] = {
+            name: currentFilter.name || '',
+            name2: currentFilter.name2 || '',
+            group: currentFilter.group || 'A',
+            group2: currentFilter.group2 || 'A',
+            compareMode: !!currentFilter.compareMode
+        };
+    }
+    function applyTypeFilterToCurrent(type) {
+        const saved = typeFilters[type] || { name: '', name2: '', group: 'A', group2: 'A', compareMode: false };
+        currentFilter.type = type;
+        currentFilter.name = saved.name || '';
+        currentFilter.name2 = saved.name2 || '';
+        currentFilter.group = saved.group || 'A';
+        currentFilter.group2 = saved.group2 || 'A';
+        currentFilter.compareMode = !!saved.compareMode;
+    }
+    function saveToStorage() {
+        const data = { reportText: reportInput.value, allLessons, parsed: allLessons.length > 0, combinedReportText };
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch (e) {}
+        stashCurrentFilter();
+        const filterToSave = { type: currentFilter.type, perType: typeFilters };
+        try { localStorage.setItem(FILTER_KEY, JSON.stringify(filterToSave)); } catch (e) {}
+    }
+    function loadFromStorage() {
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                const d = JSON.parse(saved);
+                if (d.reportText) reportInput.value = d.reportText;
+                if (d.allLessons && d.allLessons.length) {
+                    allLessons = sortLessonsByClassThenTime(d.allLessons);
+                    combinedReportText = generateCombinedReportFromLessons(allLessons);
+                    reportInput.value = combinedReportText;
+                }
+            }
+            const f = localStorage.getItem(FILTER_KEY);
+            if (f) {
+                try {
+                    const fd = JSON.parse(f);
+                    if (fd && fd.perType) {
+                        ['class', 'teacher', 'room'].forEach(t => {
+                            if (fd.perType[t]) typeFilters[t] = Object.assign({}, typeFilters[t], fd.perType[t]);
+                        });
+                        applyTypeFilterToCurrent(typeFilters[fd.type] ? fd.type : 'class');
+                    } else if (fd) {
+                        const t = (fd.type === 'teacher' || fd.type === 'room') ? fd.type : 'class';
+                        typeFilters[t] = {
+                            name: fd.name || '', name2: fd.name2 || '',
+                            group: fd.group || 'A', group2: fd.group2 || 'A',
+                            compareMode: !!fd.compareMode
+                        };
+                        applyTypeFilterToCurrent(t);
+                    }
+                } catch (e) {}
+            }
+        } catch (e) {}
+    }
+
+    // ---------- Tab switching ----------
+    tabBtns.forEach(btn => { btn.addEventListener('click', () => { tabBtns.forEach(b => b.classList.remove('active')); btn.classList.add('active'); tabPanels.forEach(p => p.classList.remove('active')); document.getElementById('panel' + btn.dataset.tab.charAt(0).toUpperCase() + btn.dataset.tab.slice(1)).classList.add('active'); }); });
+
+    // ---------- Parsing ----------
+    function parseReport(text) { const blocks = text.split(/\n\s*\n/).filter(b => b.trim()); const lessons = []; blocks.forEach(block => { const lines = block.split('\n'), entry = {}; lines.forEach(line => { const idx = line.indexOf(':'); if (idx === -1) return; const key = line.substring(0, idx).trim().toLowerCase(), val = line.substring(idx + 1).trim(); switch (key) { case 'start': entry.start = parseInt(val); break; case 'end': entry.end = parseInt(val); break; case 'day': entry.day = parseInt(val); break; case 'subject': entry.subject = val; break; case 'room': entry.room = val; break; case 'class': entry.className = val; break; case 'teacher': entry.teacher = val; break; case 'color': entry.color = val; break; case 'type': entry.type = parseInt(val); break; case 'week': entry.week = val; break; case 'group': entry.group = parseInt(val); break; } }); if (entry.start !== undefined && entry.end !== undefined && entry.day !== undefined && entry.subject && entry.className && entry.teacher) { if (!entry.color) entry.color = '#888888'; if (entry.group === undefined) entry.group = 0; if (!entry.week) entry.week = 'C'; if (!entry.room) entry.room = '?'; lessons.push(entry); } }); return lessons; }
+
+    // ---------- Sorting helpers ----------
+    function uppercaseClassSuffix(name) {
+        return String(name || '').replace(/(\d+)([а-яa-z])/g, (_, num, letter) => num + letter.toUpperCase());
+    }
+    function classSortKey(name) {
+        const norm = uppercaseClassSuffix(name);
+        const m = norm.match(/^(\d+)(.*)$/);
+        const grade = m ? parseInt(m[1], 10) : 999;
+        const suffix = m ? m[2] : norm;
+        const idx = CLASS_LETTER_ORDER.indexOf(suffix);
+        return { grade, idx: (idx === -1 ? 999 : idx), suffix };
+    }
+    function compareClassNames(a, b) {
+        const ka = classSortKey(a), kb = classSortKey(b);
+        if (ka.grade !== kb.grade) return ka.grade - kb.grade;
+        if (ka.idx !== kb.idx) return ka.idx - kb.idx;
+        return ka.suffix.localeCompare(kb.suffix);
+    }
+    function sortClassNames(names) { return [...names].sort(compareClassNames); }
+    function sortLessonsByClassThenTime(lessons) {
+        return [...lessons].sort((a, b) => {
+            const c = compareClassNames(a.className || '', b.className || '');
+            if (c !== 0) return c;
+            if (a.day !== b.day) return a.day - b.day;
+            return a.start - b.start;
+        });
+    }
+
+    // ---------- Populate selects ----------
+    function getNamesForType(type) { const set = new Set(); if (type === 'class') allLessons.forEach(l => { if (l.className) set.add(l.className); }); else if (type === 'teacher') allLessons.forEach(l => { if (l.teacher) set.add(l.teacher); }); else if (type === 'room') allLessons.forEach(l => { if (l.room) set.add(l.room); }); let names = Array.from(set); if (type === 'class') names = sortClassNames(names); else names.sort(); return names; }
+    function populateNameSelects() {
+        const type = currentFilter.type;
+        const names = getNamesForType(type);
+        nameSelect.innerHTML = '';
+        nameSelect2.innerHTML = '';
+        if (names.length === 0) {
+            nameSelect.innerHTML = '';
+            nameSelect2.innerHTML = '';
+            refreshAllCustomSelects();
+            return;
+        }
+        names.forEach(n => {
+            const o1 = document.createElement('option');
+            o1.value = n; o1.textContent = n; nameSelect.appendChild(o1);
+            const o2 = document.createElement('option');
+            o2.value = n; o2.textContent = n; nameSelect2.appendChild(o2);
+        });
+        if (currentFilter.name && names.includes(currentFilter.name)) {
+            nameSelect.value = currentFilter.name;
+        } else {
+            nameSelect.value = names[0];
+            currentFilter.name = names[0];
+        }
+        if (currentFilter.name2 && names.includes(currentFilter.name2)) {
+            nameSelect2.value = currentFilter.name2;
+        } else {
+            if (names.length > 1) {
+                const idx = names.indexOf(nameSelect.value);
+                nameSelect2.value = names[(idx + 1) % names.length];
+            } else {
+                nameSelect2.value = names[0];
+            }
+            currentFilter.name2 = nameSelect2.value;
+        }
+        refreshAllCustomSelects();
+    }
+    function applySavedFilterToUI() {
+        for (const r of viewTypeRadios) r.checked = (r.value === currentFilter.type);
+        groupSelect.value = currentFilter.group;
+        groupSelect2.value = currentFilter.group2;
+        weekSelect.value = currentFilter.week;
+        compareToggle.checked = currentFilter.compareMode;
+        secondScheduleSelect.style.display = currentFilter.compareMode ? '' : 'none';
+        scheduleSelectsContainer.classList.toggle('compare-active', currentFilter.compareMode);
+        toggleGroupVisibility();
+        populateNameSelects();
+        if (currentFilter.name2 && getNamesForType(currentFilter.type).includes(currentFilter.name2)) nameSelect2.value = currentFilter.name2;
+        refreshAllCustomSelects();
+        updateWeekIndicator();
+        updateSchedule();
+    }
+    function toggleGroupVisibility() { const isClass = currentFilter.type === 'class'; document.querySelectorAll('.group-select').forEach(el => el.style.display = isClass ? '' : 'none'); if (!isClass) { groupSelect.value = 'A'; groupSelect2.value = 'A'; refreshAllCustomSelects(); } }
+
+    // ---------- Filtering ----------
+    function filterLessonsFor(filterObj) { const { type, name, group, week } = filterObj; const effectiveGroup = (type === 'class') ? (group || 'A') : 'A'; return allLessons.filter(l => { if (type === 'class' && l.className !== name) return false; if (type === 'teacher' && l.teacher !== name) return false; if (type === 'room' && l.room !== name) return false; if (type === 'class') { if (effectiveGroup === 'A' && ![0,1].includes(l.group)) return false; if (effectiveGroup === 'B' && ![0,2].includes(l.group)) return false; } if (week === 'A' && !['A','C'].includes(l.week)) return false; if (week === 'B' && !['B','C'].includes(l.week)) return false; return true; }); }
+    function getGroupText(code) { if (code === 1) return 'Group A'; if (code === 2) return 'Group B'; return 'Both'; }
+    function getLessonTimeString(start, end) { const s = START_TIMES[start] || '??:??', e = END_TIMES[end] || '??:??'; return `[${s} - ${e}]`; }
+
+    // ---------- Rendering helpers ----------
+    function sortLessons(list) { return [...list].sort((a, b) => a.start - b.start || a.subject.localeCompare(b.subject)); }
+
+    function renderCardHTML(l, type, isCurrent) {
+        const c = adjustColorForTheme(l.color || '#888888');
+        const currentClass = isCurrent ? ' current-lesson' : '';
+        const cardId = isCurrent ? ' id="current-lesson-card"' : '';
+        const lessonColorVar = isCurrent ? `--lesson-color:${c};` : '';
+        let details;
+        if (type === 'teacher') {
+            details = `<span>🏫 ${escapeHtml(l.className)}</span><span>👥 ${escapeHtml(getGroupText(l.group))}</span><span>🚪 ${escapeHtml(l.room)}</span>`;
+        } else if (type === 'room') {
+            details = `<span>🏫 ${escapeHtml(l.className)}</span><span>👤 ${escapeHtml(l.teacher)}</span><span>👥 ${escapeHtml(getGroupText(l.group))}</span>`;
+        } else {
+            details = `<span>🏫 ${escapeHtml(l.className)}</span><span>👤 ${escapeHtml(l.teacher)}</span><span>🚪 ${escapeHtml(l.room)}</span>`;
+        }
+        return `<div class="lesson-card${currentClass}"${cardId} style="border-color:${c};color:${c};${lessonColorVar}">`
+            + `<div class="lesson-header">`
+            +   `<div class="lesson-subject">${escapeHtml(l.subject)}</div>`
+            +   `<div class="lesson-time">${getLessonTimeString(l.start, l.end)}</div>`
+            + `</div>`
+            + `<div class="lesson-details">${details}</div>`
+            + `</div>`;
+    }
+
+    function renderFillerCardHTML(startPeriod, endPeriod) {
+        const startTime = START_TIMES[startPeriod] || '??:??';
+        const endTime = END_TIMES[endPeriod] || '??:??';
+        return `<div class="lesson-card filler-card">`
+            +   `<div class="filler-time">${startTime} – ${endTime}</div>`
+            +   `<div class="filler-label">Free time</div>`
+            + `</div>`;
+    }
+
+    function adjustDetailsLayout() {
+        document.querySelectorAll('.lesson-details').forEach(el => {
+            el.classList.remove('stacked');
+            const kids = Array.from(el.children);
+            if (kids.length < 2) return;
+
+            const tops = kids.map(k => Math.round(k.getBoundingClientRect().top));
+            const allSameLine = tops.every(t => t === tops[0]);
+            if (allSameLine) return;
+
+            el.classList.add('stacked');
+
+            requestAnimationFrame(() => {
+                if (!el.classList.contains('stacked')) return;
+                const rects = Array.from(el.children).map(k => k.getBoundingClientRect());
+                const uniqueTops = new Set(rects.map(r => Math.round(r.top)));
+                if (uniqueTops.size < rects.length) {
+                    el.classList.remove('stacked');
+                }
+            });
+        });
+    }
+
+    function computeMarkerPeriod(lessons, currentDay, currentMinutes, dayIdx) {
+        if (dayIdx !== currentDay || lessons.length === 0) return -2;
+        if (lessons.some(l => isLessonCurrent(l, currentDay, currentMinutes))) return -2;
+        for (let p = 0; p < MAX_PERIODS; p++) {
+            const endP = timeToMinutes(END_TIMES[p + 1]);
+            if (endP !== -1 && endP > currentMinutes) return p;
+        }
+        return MAX_PERIODS;
+    }
+
+    function renderDayHTML(dayLessons, type, currentDay, currentMinutes) {
+        const sorted = sortLessons(dayLessons);
+        if (sorted.length === 0) return '';
+
+        const dayIdx = sorted[0].day;
+        const firstStart = Math.min(...sorted.map(l => l.start));
+        const lastEnd = Math.min(MAX_PERIODS, Math.max(1, Math.max(...sorted.map(l => l.end))));
+
+        const atPeriod = new Map();
+        sorted.forEach(l => {
+            if (!atPeriod.has(l.start)) atPeriod.set(l.start, []);
+            atPeriod.get(l.start).push(l);
+        });
+
+        let markerAt = computeMarkerPeriod(sorted, currentDay, currentMinutes, dayIdx);
+        let bottomMarker = false;
+        if (markerAt >= lastEnd && markerAt !== -2) { bottomMarker = true; markerAt = -2; }
+
+        // ----- Row planning -----
+        const rowSizes = [];
+        const periodStartRow = {};
+        let curRow = 1;
+        for (let p = 0; p < lastEnd; p++) {
+            if (markerAt === p) {
+                rowSizes.push('var(--marker-row-height, 6px)');
+                curRow++;
+            }
+            periodStartRow[p] = curRow;
+            rowSizes.push('var(--period-height, 74px)');
+            curRow++;
+        }
+        periodStartRow[lastEnd] = curRow;
+
+        let html = `<div class="period-grid" style="grid-template-rows:${rowSizes.join(' ')};">`;
+
+        // ----- Filler card (free time before the first lesson) -----
+        const markerInFiller = (markerAt >= 0 && markerAt < firstStart);
+        if (firstStart > 0 && !markerInFiller) {
+            const rowStart = periodStartRow[0];
+            const rowEnd   = periodStartRow[firstStart - 1] + 1;
+            html += `<div class="period-cell" style="grid-row:${rowStart} / ${rowEnd};">`
+                 +  renderFillerCardHTML(0, firstStart)
+                 +  `</div>`;
+        } else if (firstStart > 0 && markerInFiller) {
+            if (markerAt > 0) {
+                const rowStart = periodStartRow[0];
+                const rowEnd   = periodStartRow[markerAt - 1] + 1;
+                html += `<div class="period-cell" style="grid-row:${rowStart} / ${rowEnd};">`
+                     +  renderFillerCardHTML(0, markerAt)
+                     +  `</div>`;
+            }
+            const markerRow = periodStartRow[markerAt] - 1;
+            html += `<div class="period-marker" style="grid-row:${markerRow};grid-column:1 / -1;">`
+                 +  `<div class="current-time-line" id="current-time-marker"></div>`
+                 +  `</div>`;
+            const rowStart = periodStartRow[markerAt];
+            const rowEnd   = periodStartRow[firstStart - 1] + 1;
+            html += `<div class="period-cell" style="grid-row:${rowStart} / ${rowEnd};">`
+                 +  renderFillerCardHTML(markerAt, firstStart)
+                 +  `</div>`;
+        } else if (markerAt >= 0 && markerAt < lastEnd) {
+            const markerRow = periodStartRow[markerAt] - 1;
+            html += `<div class="period-marker" style="grid-row:${markerRow};grid-column:1 / -1;">`
+                 +  `<div class="current-time-line" id="current-time-marker"></div>`
+                 +  `</div>`;
+        }
+
+        // ----- Lesson cards -----
+        for (let p = 0; p < lastEnd; p++) {
+            if (!atPeriod.has(p)) continue;
+            const group = atPeriod.get(p);
+            const endPeriod = Math.max(...group.map(l => l.end));
+            const rowStart = periodStartRow[p];
+            const rowEnd   = periodStartRow[endPeriod - 1] + 1;
+            html += `<div class="period-cell" style="grid-row:${rowStart} / ${rowEnd};">`;
+            group.forEach(l => {
+                html += renderCardHTML(l, type, isLessonCurrent(l, currentDay, currentMinutes));
+            });
+            html += `</div>`;
+        }
+
+        html += `</div>`;
+
+        if (bottomMarker) {
+            html += `<div class="current-time-line bottom-marker" id="current-time-marker"></div>`;
+        }
+        return html;
+    }
+
+    function renderCompareDay(dayIdx, lessonsA, lessonsB, type, currentDay, currentMinutes) {
+        const a = sortLessons(lessonsA);
+        const b = sortLessons(lessonsB);
+        if (a.length === 0 && b.length === 0) return '';
+
+        const lastEndA = a.length ? Math.min(MAX_PERIODS, Math.max(1, Math.max(...a.map(l => l.end)))) : 0;
+        const lastEndB = b.length ? Math.min(MAX_PERIODS, Math.max(1, Math.max(...b.map(l => l.end)))) : 0;
+        const lastEnd = Math.max(lastEndA, lastEndB);
+
+        const buildMap = list => {
+            const m = new Map();
+            list.forEach(l => {
+                if (!m.has(l.start)) m.set(l.start, []);
+                m.get(l.start).push(l);
+            });
+            return m;
+        };
+        const atA = buildMap(a);
+        const atB = buildMap(b);
+
+        const firstStartA = a.length ? Math.min(...a.map(l => l.start)) : -1;
+        const firstStartB = b.length ? Math.min(...b.map(l => l.start)) : -1;
+
+        let markerAtA = computeMarkerPeriod(a, currentDay, currentMinutes, dayIdx);
+        let markerAtB = computeMarkerPeriod(b, currentDay, currentMinutes, dayIdx);
+        let bottomA = false, bottomB = false;
+        if (markerAtA >= lastEnd && markerAtA !== -2) { bottomA = true; markerAtA = -2; }
+        if (markerAtB >= lastEnd && markerAtB !== -2) { bottomB = true; markerAtB = -2; }
+
+        // ----- Row planning (union of both columns' marker rows) -----
+        const markerPositions = new Set();
+        if (markerAtA >= 0 && markerAtA < lastEnd) markerPositions.add(markerAtA);
+        if (markerAtB >= 0 && markerAtB < lastEnd) markerPositions.add(markerAtB);
+
+        const rowSizes = [];
+        const periodStartRow = {};
+        let curRow = 1;
+        for (let p = 0; p < lastEnd; p++) {
+            if (markerPositions.has(p)) {
+                rowSizes.push('var(--marker-row-height, 6px)');
+                curRow++;
+            }
+            periodStartRow[p] = curRow;
+            rowSizes.push('var(--period-height, 74px)');
+            curRow++;
+        }
+        periodStartRow[lastEnd] = curRow;
+
+        // If either column needs its bottom marker AFTER the last period row,
+        // append one shared extra row at the end for it/them.
+        let bottomExtraRow = -1;
+        const needExtraForA = bottomA && lastEndA >= lastEnd;
+        const needExtraForB = bottomB && lastEndB >= lastEnd;
+        if (needExtraForA || needExtraForB) {
+            bottomExtraRow = curRow;
+            rowSizes.push('var(--marker-row-height, 6px)');
+            curRow++;
+        }
+
+        let html = `<div class="period-grid period-grid-compare" style="grid-template-rows:${rowSizes.join(' ')};">`;
+
+        const emitFiller = (col, firstStart, markerAt) => {
+            if (firstStart <= 0) return '';
+            const markerInFiller = (markerAt >= 0 && markerAt < firstStart);
+            let out = '';
+            if (!markerInFiller) {
+                const rowStart = periodStartRow[0];
+                const rowEnd   = periodStartRow[firstStart - 1] + 1;
+                out += `<div class="period-cell" style="grid-column:${col};grid-row:${rowStart} / ${rowEnd};">`
+                     +  renderFillerCardHTML(0, firstStart)
+                     +  `</div>`;
+            } else {
+                if (markerAt > 0) {
+                    const rowStart = periodStartRow[0];
+                    const rowEnd   = periodStartRow[markerAt - 1] + 1;
+                    out += `<div class="period-cell" style="grid-column:${col};grid-row:${rowStart} / ${rowEnd};">`
+                         +  renderFillerCardHTML(0, markerAt)
+                         +  `</div>`;
+                }
+                const rowStart = periodStartRow[markerAt];
+                const rowEnd   = periodStartRow[firstStart - 1] + 1;
+                out += `<div class="period-cell" style="grid-column:${col};grid-row:${rowStart} / ${rowEnd};">`
+                     +  renderFillerCardHTML(markerAt, firstStart)
+                     +  `</div>`;
+            }
+            return out;
+        };
+        html += emitFiller(1, firstStartA, markerAtA);
+        html += emitFiller(2, firstStartB, markerAtB);
+
+        const emitMarker = (col, markerAt) => {
+            if (markerAt < 0 || markerAt >= lastEnd) return '';
+            const markerRow = periodStartRow[markerAt] - 1;
+            const id = col === 1 ? 'current-time-marker-a' : 'current-time-marker-b';
+            return `<div class="period-marker" style="grid-row:${markerRow};grid-column:${col};">`
+                 +  `<div class="current-time-line" id="${id}"></div>`
+                 +  `</div>`;
+        };
+        html += emitMarker(1, markerAtA);
+        html += emitMarker(2, markerAtB);
+
+        const emitCards = (col, map) => {
+            let out = '';
+            for (let p = 0; p < lastEnd; p++) {
+                if (!map.has(p)) continue;
+                const group = map.get(p);
+                const endPeriod = Math.max(...group.map(l => l.end));
+                const rowStart = periodStartRow[p];
+                const rowEnd   = periodStartRow[endPeriod - 1] + 1;
+                out += `<div class="period-cell" style="grid-column:${col};grid-row:${rowStart} / ${rowEnd};">`;
+                group.forEach(l => {
+                    out += renderCardHTML(l, type, isLessonCurrent(l, currentDay, currentMinutes));
+                });
+                out += `</div>`;
+            }
+            return out;
+        };
+        html += emitCards(1, atA);
+        html += emitCards(2, atB);
+
+        // Bottom markers — placed INSIDE the grid so each one sits right after
+        // its own column's last lesson. If the column spans all the way to the
+        // grid's last period row, its marker lands in the extra row we added.
+        const emitBottomMarker = (col, flag, colLastEnd) => {
+            if (!flag) return '';
+            const markerRow = (colLastEnd < lastEnd)
+                ? periodStartRow[colLastEnd]   // top of the next period row
+                : bottomExtraRow;              // extra row at the very end
+            if (markerRow < 0) return '';
+            const id = col === 1 ? 'current-time-marker-a' : 'current-time-marker-b';
+            return `<div class="period-marker period-marker-bottom" style="grid-row:${markerRow};grid-column:${col};">`
+                 +  `<div class="current-time-line" id="${id}"></div>`
+                 +  `</div>`;
+        };
+        html += emitBottomMarker(1, bottomA, lastEndA);
+        html += emitBottomMarker(2, bottomB, lastEndB);
+
+        html += `</div>`;
+
+        return html;
+    }
+
+    // ---------- Main render ----------
+    function renderSchedule() {
+        const type = currentFilter.type;
+        const week = weekSelect.value;
+        const currentDay = getCurrentDayIndex();
+        const currentMinutes = getCurrentTimeMinutes();
+
+        if (currentFilter.compareMode) {
+            const group1 = (type === 'class') ? groupSelect.value : 'A';
+            const group2 = (type === 'class') ? groupSelect2.value : 'A';
+            const f1 = { type, name: nameSelect.value, group: group1, week };
+            const f2 = { type, name: nameSelect2.value, group: group2, week };
+            const lessons1 = filterLessonsFor(f1);
+            const lessons2 = filterLessonsFor(f2);
+
+            let html = '';
+            for (let d = 0; d < 5; d++) {
+                const dayA = lessons1.filter(l => l.day === d);
+                const dayB = lessons2.filter(l => l.day === d);
+                if (dayA.length === 0 && dayB.length === 0) continue;
+                html += `<div class="compare-day-row">`;
+                html += `<div class="compare-day-header">${DAY_NAMES[d]}</div>`;
+                html += renderCompareDay(d, dayA, dayB, type, currentDay, currentMinutes);
+                html += `</div>`;
+            }
+            if (html === '') html = '<div class="empty-state">No lessons match the current filters.</div>';
+            scheduleSection.innerHTML = html;
+            requestAnimationFrame(adjustDetailsLayout);
+            return;
+        } else {
+            const group = (type === 'class') ? groupSelect.value : 'A';
+            const f = { type, name: nameSelect.value, group, week };
+            const lessons = filterLessonsFor(f);
+            let html = '';
+            for (let d = 0; d < 5; d++) {
+                const dayLessons = lessons.filter(l => l.day === d);
+                if (dayLessons.length === 0) continue;
+                html += `<div class="day-header">${DAY_NAMES[d]}</div>`;
+                html += renderDayHTML(dayLessons, type, currentDay, currentMinutes);
+            }
+            if (html === '') html = '<div class="empty-state">No lessons match the current filters.</div>';
+            scheduleSection.innerHTML = html;
+            requestAnimationFrame(adjustDetailsLayout);
+            return;
+        }
+    }
+
+    // ---------- Scroll ----------
+    function scrollToCurrentLesson() {
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                const target = scheduleSection.querySelector('.current-lesson')
+                    || scheduleSection.querySelector('.period-marker')
+                    || scheduleSection.querySelector('.current-time-line');
+                if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+        });
+    }
+    function performInitialScrollIfNeeded() { if (initialScrollDone) return; initialScrollDone = true; const indicator = scheduleSection.querySelector('.current-lesson') || scheduleSection.querySelector('.period-marker') || scheduleSection.querySelector('.current-time-line'); if (indicator) scrollToCurrentLesson(); }
+
+    let _detailsResizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(_detailsResizeTimer);
+        _detailsResizeTimer = setTimeout(adjustDetailsLayout, 120);
+    });
+
+    // ---------- Update ----------
+    function updateSchedule() {
+        currentFilter.name = nameSelect.value;
+        currentFilter.name2 = nameSelect2.value;
+        currentFilter.group = (currentFilter.type === 'class') ? groupSelect.value : 'A';
+        currentFilter.group2 = (currentFilter.type === 'class') ? groupSelect2.value : 'A';
+        currentFilter.week = weekSelect.value;
+        currentFilter.compareMode = compareToggle.checked;
+        for (const r of viewTypeRadios) if (r.checked) { currentFilter.type = r.value; break; }
+        toggleGroupVisibility();
+        secondScheduleSelect.style.display = currentFilter.compareMode ? '' : 'none';
+        scheduleSelectsContainer.classList.toggle('compare-active', currentFilter.compareMode);
+        renderSchedule();
+        updateWeekIndicator();
+        saveToStorage();
+    }
+    function showFiltersAndSchedule() {
+        filterSection.style.display = 'flex';
+        scheduleSection.style.display = 'block';
+        applySavedFilterToUI();
+        importStatus.textContent = `Loaded ${allLessons.length} lessons.`;
+        importStatus.className = 'status-msg success';
+        performInitialScrollIfNeeded();
+    }
+
+    // ---------- Parse button ----------
+    function handleParse() {
+        const text = reportInput.value.trim();
+        if (!text) { setStatus('Please paste or load a report first.', 'error'); return; }
+        allLessons = sortLessonsByClassThenTime(parseReport(text));
+        combinedReportText = generateCombinedReportFromLessons(allLessons);
+        if (allLessons.length === 0) {
+            setStatus('No valid schedule entries found.', 'error');
+            filterSection.style.display = 'none';
+            scheduleSection.style.display = 'none';
+        } else showFiltersAndSchedule();
+        saveToStorage();
+    }
+
+    // ==================== PDF PROCESSING ====================
+    async function renderVectorBg(operatorList) {
+        const ops = operatorList.fnArray, args = operatorList.argsArray;
+        let chunks = [], m = [1,0,0,1,0,0], fill = 'black', stroke = 'black', lw = 1, font = 'sans-serif', fsize = 12, pts = [];
+        function mat(s) { return `matrix(${s[0]},${s[1]},${s[2]},${s[3]},${s[4]},${s[5]})`; }
+        function xform(mm) { const a=mm[0]*m[0]+mm[1]*m[2], b=mm[0]*m[1]+mm[1]*m[3], c=mm[2]*m[0]+mm[3]*m[2], d=mm[2]*m[1]+mm[3]*m[3], e=mm[4]*m[0]+mm[5]*m[2]+m[4], f=mm[4]*m[1]+mm[5]*m[3]+m[5]; m=[a,b,c,d,e,f]; }
+        function flush() { if(pts.length<2) return; let d='M'+pts[0].x+','+pts[0].y; for(let i=1;i<pts.length;i++) d+='L'+pts[i].x+','+pts[i].y; let s=''; if(fill!=='none') s+='fill:'+fill+';'; if(stroke!=='none') s+='stroke:'+stroke+';stroke-width:'+lw+';'; if(s) chunks.push(`<path d="${d}" style="${s}" transform="${mat(m)}"/>`); pts=[]; }
+        for(let i=0;i<ops.length;i++){ const op=ops[i], arg=args[i]; try{ switch(op){ case pdfjsLib.OPS.transform: xform(arg); break; case pdfjsLib.OPS.moveTo: flush(); pts.push({x:arg[0],y:arg[1]}); break; case pdfjsLib.OPS.lineTo: pts.push({x:arg[0],y:arg[1]}); break; case pdfjsLib.OPS.curveTo: pts.push({x:arg[4],y:arg[5]}); break; case pdfjsLib.OPS.closePath: if(pts.length) pts.push(pts[0]); break; case pdfjsLib.OPS.fill: flush(); break; case pdfjsLib.OPS.stroke: flush(); break; case pdfjsLib.OPS.fillStroke: flush(); break; case pdfjsLib.OPS.setFillRGBColor: fill=`rgb(${Math.round(arg[0]*255)},${Math.round(arg[1]*255)},${Math.round(arg[2]*255)})`; break; case pdfjsLib.OPS.setStrokeRGBColor: stroke=`rgb(${Math.round(arg[0]*255)},${Math.round(arg[1]*255)},${Math.round(arg[2]*255)})`; break; case pdfjsLib.OPS.setFont: font=arg[0]; fsize=arg[1]; break; case pdfjsLib.OPS.showText: chunks.push(`<text x="${m[4]}" y="${m[5]}" font-family="${font}" font-size="${fsize}" fill="${fill}" transform="${mat(m)}">${(arg[0]||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</text>`); break; case pdfjsLib.OPS.showSpacedText: let t=''; (arg[0]||[]).forEach(item=>{ t+=typeof item==='string'?item:typeof item==='number'?String.fromCharCode(item):''; }); chunks.push(`<text x="${m[4]}" y="${m[5]}" font-family="${font}" font-size="${fsize}" fill="${fill}" transform="${mat(m)}">${t.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</text>`); break; } } catch(e){} }
+        flush(); return chunks.join('\n');
+    }
+
+    async function renderImageBg(page, viewport) {
+        const scale = 2; const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
+        const renderViewport = viewport.clone({scale}); canvas.width = renderViewport.width; canvas.height = renderViewport.height;
+        await page.render({canvasContext:ctx, viewport:renderViewport}).promise;
+        const dataUrl = canvas.toDataURL('image/png');
+        return `<image width="${viewport.width}" height="${viewport.height}" href="${dataUrl}"/>`;
+    }
+
+    async function getBackgroundSvg(page) {
+        const viewport = page.getViewport({scale:1.0}); const w=viewport.width, h=viewport.height;
+        let vectorContent='';
+        try { const ops=await page.getOperatorList(); if(ops.fnArray.length>0) vectorContent=await renderVectorBg(ops); } catch(e){ console.warn(e); }
+        if(!vectorContent.trim()) vectorContent=await renderImageBg(page, viewport);
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">\n${vectorContent}\n</svg>`;
+    }
+
+    function matrixToString(m) { return `matrix(${m.a},${m.b},${m.c},${m.d},${m.e},${m.f})`; }
+    function getRootBBox(el, root) {
+        try {
+            const lb = el.getBBox(); if(lb.width===0&&lb.height===0){ lb.width=0.1; lb.height=0.1; }
+            const cm = el.getCTM(), cr = root.getCTM(); if(!cm||!cr) return null;
+            const inv = cr.inverse(), tr = inv.multiply(cm);
+            const pts = [{x:lb.x,y:lb.y},{x:lb.x+lb.width,y:lb.y},{x:lb.x,y:lb.y+lb.height},{x:lb.x+lb.width,y:lb.y+lb.height}]
+                .map(p => { const sp = root.createSVGPoint(); sp.x=p.x; sp.y=p.y; return sp.matrixTransform(tr); });
+            const xs = pts.map(p=>p.x), ys = pts.map(p=>p.y);
+            return {x:Math.min(...xs), y:Math.min(...ys), width:Math.max(...xs)-Math.min(...xs), height:Math.max(...ys)-Math.min(...ys)};
+        } catch(e) { return null; }
+    }
+    function getFill(p) {
+        let f = p.getAttribute('fill'); if(f&&f!=='none') return f;
+        const s = p.getAttribute('style'); if(s) { const m = s.match(/fill\s*:\s*([^;]+)/i); if(m) return m[1].trim(); }
+        const cs = window.getComputedStyle(p); if(cs&&cs.fill&&cs.fill!=='none') return cs.fill;
+        return 'none';
+    }
+
+    async function extractText(page, h) {
+        const tc = await page.getTextContent(); let els = [];
+        tc.items.forEach(it => {
+            if(!it.str) return; const m = it.transform; if(!m||m.length<6) return;
+            const fy = h - m[5]; const mat = `matrix(${m[0]},${m[1]},${m[2]},${m[3]},${m[4]},${fy})`;
+            const col = it.color ? `rgb(${it.color[0]},${it.color[1]},${it.color[2]})` : 'black';
+            els.push(`<text font-size="1" font-family="${it.fontName||'sans-serif'}" fill="${col}" transform="${mat}">${it.str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</text>`);
+        });
+        return els.join('\n');
+    }
+
+    async function extractPaths(page) {
+        const ops = await page.getOperatorList(); if(ops.fnArray.length===0) return '';
+        let els=[], st={matrix:[1,0,0,1,0,0],fillColor:'black',strokeColor:'black',lineWidth:1}, stack=[], segs=[];
+        function sv(){ stack.push(JSON.parse(JSON.stringify(st))); }
+        function rs(){ if(stack.length) st=stack.pop(); }
+        function tp(x,y){ const [a,b,c,d,e,f]=st.matrix; return {x:a*x+c*y+e, y:b*x+d*y+f}; }
+        function ms(){ const m=st.matrix; return `matrix(${m[0]},${m[1]},${m[2]},${m[3]},${m[4]},${m[5]})`; }
+        function at(tm){ const m=st.matrix; st.matrix=[tm[0]*m[0]+tm[1]*m[2], tm[0]*m[1]+tm[1]*m[3], tm[2]*m[0]+tm[3]*m[2], tm[2]*m[1]+tm[3]*m[3], tm[4]*m[0]+tm[5]*m[2]+m[4], tm[4]*m[1]+tm[5]*m[3]+m[5]]; }
+        function sp(){ segs=[]; }
+        function am(x,y){ segs.push({type:'M',pts:[tp(x,y)]}); }
+        function al(x,y){ segs.push({type:'L',pts:[tp(x,y)]}); }
+        function ac(x1,y1,x2,y2,x3,y3){ segs.push({type:'C',pts:[tp(x1,y1),tp(x2,y2),tp(x3,y3)]}); }
+        function cp(){ segs.push({type:'Z',pts:[]}); }
+        function bd(){ if(!segs.length) return ''; let d=''; segs.forEach(s=>{ const p=s.pts; if(s.type==='M') d+=`M${p[0].x},${p[0].y} `; else if(s.type==='L') d+=`L${p[0].x},${p[0].y} `; else if(s.type==='C') d+=`C${p[0].x},${p[0].y} ${p[1].x},${p[1].y} ${p[2].x},${p[2].y} `; else if(s.type==='Z') d+='Z '; }); return d.trim(); }
+        function fl(pt){ if(!segs.length) return; const d=bd(); if(!d) return; let style=''; if(pt==='fill'||pt==='both') style+=`fill:${st.fillColor};`; if(pt==='stroke'||pt==='both') style+=`stroke:${st.strokeColor};stroke-width:${st.lineWidth};`; if(!style) return; els.push(`<path d="${d}" style="${style}" transform="${ms()}"/>`); sp(); }
+        for(let i=0;i<ops.fnArray.length;i++){
+            const op=ops.fnArray[i], arg=ops.argsArray[i];
+            try{
+                switch(op){
+                    case pdfjsLib.OPS.save: sv(); break; case pdfjsLib.OPS.restore: rs(); break;
+                    case pdfjsLib.OPS.transform: at(arg); break; case pdfjsLib.OPS.moveTo: am(arg[0],arg[1]); break;
+                    case pdfjsLib.OPS.lineTo: al(arg[0],arg[1]); break; case pdfjsLib.OPS.curveTo: ac(arg[0],arg[1],arg[2],arg[3],arg[4],arg[5]); break;
+                    case pdfjsLib.OPS.curveTo2: al(arg[2],arg[3]); break; case pdfjsLib.OPS.curveTo3: al(arg[4],arg[5]); break;
+                    case pdfjsLib.OPS.closePath: cp(); break; case pdfjsLib.OPS.rectangle: sp(); am(arg[0],arg[1]); al(arg[0]+arg[2],arg[1]); al(arg[0]+arg[2],arg[1]+arg[3]); al(arg[0],arg[1]+arg[3]); cp(); break;
+                    case pdfjsLib.OPS.fill: fl('fill'); break; case pdfjsLib.OPS.stroke: fl('stroke'); break; case pdfjsLib.OPS.fillStroke: fl('both'); break;
+                    case pdfjsLib.OPS.endPath: sp(); break;
+                    case pdfjsLib.OPS.setFillRGBColor: st.fillColor=`rgb(${Math.round(arg[0]*255)},${Math.round(arg[1]*255)},${Math.round(arg[2]*255)})`; break;
+                    case pdfjsLib.OPS.setStrokeRGBColor: st.strokeColor=`rgb(${Math.round(arg[0]*255)},${Math.round(arg[1]*255)},${Math.round(arg[2]*255)})`; break;
+                    case pdfjsLib.OPS.setLineWidth: st.lineWidth=arg[0]; break;
+                }
+            }catch(e){}
+        }
+        return els.join('\n');
+    }
+
+    async function convertPageToRawSvg(page) {
+        const vp = page.getViewport({scale:1}); const w=vp.width, h=vp.height;
+        const pSvg = await extractPaths(page); const tSvg = await extractText(page, h);
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">\n${pSvg}\n${tSvg}\n</svg>`;
+    }
+
+    function detectClassFromSVG(svg) {
+        try {
+            const doc = new DOMParser().parseFromString(svg,'image/svg+xml'); const svgEl = doc.querySelector('svg'); if(!svgEl) return '?';
+            const texts = svgEl.querySelectorAll('text'); if(!texts.length) return '?';
+            const raw = texts[texts.length-1].textContent.trim(); if(!raw) return '?';
+            const parts = raw.split('-'); if(parts.length===2) return parts[0].trim() + (CYR_UPPER[parts[1].trim()] || parts[1].trim().toUpperCase());
+            return raw;
+        } catch(e){ return '?'; }
+    }
+
+    function filterSVG(svg) {
+        const div = document.createElement('div'); div.style.cssText='position:absolute;visibility:hidden;width:0;height:0;'; div.innerHTML=svg; document.body.appendChild(div);
+        let res='';
+        try{
+            const svgEl = div.querySelector('svg'); if(!svgEl) throw new Error('no svg');
+            const root = svgEl, newSvg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+            for(let a of svgEl.attributes) if(a.name!=='xmlns') newSvg.setAttribute(a.name,a.value);
+            if(!newSvg.getAttribute('xmlns')) newSvg.setAttribute('xmlns','http://www.w3.org/2000/svg');
+            svgEl.querySelectorAll('path, text').forEach(el => {
+                if(el.tagName.toLowerCase()==='text' && !el.textContent.trim()) return;
+                try{
+                    const lb = el.getBBox(); if(lb.width===0&&lb.height===0){lb.width=0.1;lb.height=0.1;}
+                    const ce=el.getCTM(), cr=root.getCTM(); if(!ce||!cr) return;
+                    const inv=cr.inverse(), tr=inv.multiply(ce);
+                    const pts=[{x:lb.x,y:lb.y},{x:lb.x+lb.width,y:lb.y},{x:lb.x,y:lb.y+lb.height},{x:lb.x+lb.width,y:lb.y+lb.height}]
+                        .map(p=>{const sp=root.createSVGPoint();sp.x=p.x;sp.y=p.y;return sp.matrixTransform(tr);});
+                    const xs=pts.map(p=>p.x), ys=pts.map(p=>p.y);
+                    const bb={x:Math.min(...xs),y:Math.min(...ys),width:Math.max(...xs)-Math.min(...xs),height:Math.max(...ys)-Math.min(...ys)};
+                    if(bb.x>=RECT.minX && bb.x+bb.width<=RECT.maxX && bb.y>=RECT.minY && bb.y+bb.height<=RECT.maxY) {
+                        const clone = el.cloneNode(true); clone.removeAttribute('transform'); clone.setAttribute('transform', matrixToString(tr)); newSvg.appendChild(clone);
+                    }
+                }catch(e){}
+            });
+            res = new XMLSerializer().serializeToString(newSvg);
+        } finally { document.body.removeChild(div); }
+        return res;
+    }
+
+    function computeGroupBBox(g, orig) {
+        const tmp = document.createElementNS('http://www.w3.org/2000/svg','svg');
+        ['viewBox','width','height'].forEach(a=>{const v=orig.getAttribute(a); if(v) tmp.setAttribute(a,v);});
+        if(!tmp.getAttribute('viewBox')) tmp.setAttribute('viewBox','0 0 1000 600');
+        tmp.style.cssText='position:absolute;visibility:hidden;pointer-events:none;'; document.body.appendChild(tmp);
+        const clone = g.cloneNode(true); tmp.appendChild(clone);
+        let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+        clone.querySelectorAll('text').forEach(t=>{
+            try{
+                const bb = t.getBBox(); if(bb.width===0&&bb.height===0) return;
+                const ctm = t.getCTM(); if(!ctm) return;
+                [{x:bb.x,y:bb.y},{x:bb.x+bb.width,y:bb.y},{x:bb.x,y:bb.y+bb.height},{x:bb.x+bb.width,y:bb.y+bb.height}]
+                    .forEach(p=>{const sp=tmp.createSVGPoint();sp.x=p.x;sp.y=p.y;const tp=sp.matrixTransform(ctm); if(tp.x<minX)minX=tp.x; if(tp.y<minY)minY=tp.y; if(tp.x>maxX)maxX=tp.x; if(tp.y>maxY)maxY=tp.y;});
+            }catch(e){}
+        });
+        document.body.removeChild(tmp);
+        if(!isFinite(minX)) return null;
+        return {x:minX,y:minY,width:maxX-minX,height:maxY-minY};
+    }
+
+    function groupTextsInSVG(svg) {
+        const doc = new DOMParser().parseFromString(svg,'image/svg+xml'); const svgEl = doc.querySelector('svg'); if(!svgEl) throw new Error('no svg');
+        const children = Array.from(svgEl.childNodes), newKids=[];
+        let i=0; const groups=[];
+        const isMain = n => n.nodeType===1 && n.tagName.toLowerCase()==='text' && MAIN_SIZES.some(s=>Math.abs(parseFloat((n.getAttribute('transform')||'').match(/matrix\(\s*([+-]?\d*\.?\d+)/)?.[1]||0)-s)<MAIN_SIZE_TOL);
+        while(i<children.length) {
+            const node = children[i];
+            if(node.nodeType===1 && node.tagName.toLowerCase()==='text') {
+                if(isMain(node)) {
+                    const items=[node]; let j=i+1;
+                    while(j<children.length && children[j].nodeType===1 && children[j].tagName.toLowerCase()==='text' && !isMain(children[j])) { items.push(children[j]); j++; }
+                    const g=document.createElementNS('http://www.w3.org/2000/svg','g'); items.forEach(it=>g.appendChild(it)); newKids.push(g); groups.push(g); i=j;
+                } else { newKids.push(node); i++; }
+            } else { newKids.push(node); i++; }
+        }
+        groups.forEach((g,idx)=>{
+            g.setAttribute('id','block-'+(idx+1));
+            const bb = computeGroupBBox(g, svgEl);
+            if(bb) {
+                const r = document.createElementNS('http://www.w3.org/2000/svg','rect');
+                r.setAttribute('x',bb.x); r.setAttribute('y',bb.y); r.setAttribute('width',bb.width); r.setAttribute('height',bb.height); r.setAttribute('fill','#0f0');
+                g.insertBefore(r, g.firstChild);
+            }
+        });
+        while(svgEl.firstChild) svgEl.removeChild(svgEl.firstChild);
+        newKids.forEach(c=>svgEl.appendChild(c));
+        return { svgString: new XMLSerializer().serializeToString(svgEl), groupCount: groups.length };
+    }
+
+    function snapAndExtend(svg) {
+        const doc = new DOMParser().parseFromString(svg,'image/svg+xml'); const svgEl = doc.querySelector('svg');
+        svgEl.querySelectorAll('g').forEach(g=>{
+            const r = g.querySelector('rect[fill="#0f0"]'); if(!r) return;
+            const x=parseFloat(r.getAttribute('x')), y=parseFloat(r.getAttribute('y')), w=parseFloat(r.getAttribute('width')), h=parseFloat(r.getAttribute('height'));
+            let cs=Math.floor((x-GRID.xMin)/GRID.colW), ce=Math.ceil((x+w-GRID.xMin)/GRID.colW)-1; cs=Math.max(0,Math.min(GRID.cols-1,cs)); ce=Math.max(0,Math.min(GRID.cols-1,ce)); if(cs>ce){r.remove();return;}
+            let rs=Math.floor((y-GRID.yMin)/GRID.rowH), re=Math.ceil((y+h-GRID.yMin)/GRID.rowH)-1; rs=Math.max(0,Math.min(GRID.rows-1,rs)); re=Math.max(0,Math.min(GRID.rows-1,re)); if(rs>re){r.remove();return;}
+            if((re-rs+1)===3 && rs>0) rs--;
+            const nx=GRID.xMin+cs*GRID.colW, ny=GRID.yMin+rs*GRID.rowH, nw=(ce-cs+1)*GRID.colW, nh=(re-rs+1)*GRID.rowH;
+            const p=document.createElementNS('http://www.w3.org/2000/svg','path'); p.setAttribute('d',`M${nx},${ny}h${nw}v${nh}h${-nw}Z`); p.setAttribute('fill',r.getAttribute('fill')||'#0f0');
+            g.insertBefore(p,r); g.removeChild(r);
+        });
+        return new XMLSerializer().serializeToString(svgEl);
+    }
+
+    async function sampleColorFromSvgAt(bgSvgString, x, y) {
+        const blob = new Blob([bgSvgString], {type:'image/svg+xml'}); const url = URL.createObjectURL(blob); const img = new Image();
+        await new Promise((resolve,reject)=>{ img.onload=resolve; img.onerror=reject; img.src=url; });
+        const parser = new DOMParser(); const doc = parser.parseFromString(bgSvgString,'image/svg+xml'); const svgEl = doc.querySelector('svg');
+        let w=800,h=600;
+        if(svgEl){ const vb=svgEl.getAttribute('viewBox'); if(vb){ const parts=vb.split(/\s+/); if(parts.length===4){ w=parseFloat(parts[2]); h=parseFloat(parts[3]); } } else { w=parseFloat(svgEl.getAttribute('width'))||w; h=parseFloat(svgEl.getAttribute('height'))||h; } }
+        const canvas = document.createElement('canvas'); canvas.width=w; canvas.height=h; const ctx = canvas.getContext('2d');
+        ctx.drawImage(img,0,0,w,h); const pixel = ctx.getImageData(Math.round(x),Math.round(y),1,1).data; URL.revokeObjectURL(url);
+        return `rgba(${pixel[0]},${pixel[1]},${pixel[2]},${pixel[3]/255})`;
+    }
+
+    async function recolorForegroundPaths(fgSvgString, bgSvgString) {
+        const parser = new DOMParser(); const doc = parser.parseFromString(fgSvgString,'image/svg+xml'); const svg = doc.querySelector('svg');
+        if(!svg) return fgSvgString;
+        const paths = svg.querySelectorAll('path');
+        for(const path of paths){
+            const d = path.getAttribute('d'); if(!d) continue;
+            const match = d.match(/M\s*([\d.]+)\s*,\s*([\d.]+)/); if(!match) continue;
+            const x=parseFloat(match[1]), y=parseFloat(match[2]);
+            const sampleX=x+5, sampleY=y+5;
+            try { const color = await sampleColorFromSvgAt(bgSvgString, sampleX, sampleY); path.setAttribute('fill', color); } catch(e){}
+        }
+        return new XMLSerializer().serializeToString(svg);
+    }
+
+    function processSVGToReport(svg, classLabel) {
+        const div = document.createElement('div'); div.style.cssText='position:absolute;visibility:hidden;width:0;height:0;'; div.innerHTML=svg; document.body.appendChild(div);
+        let blocks=[];
+        try{
+            const svgEl = div.querySelector('svg'); const root=svgEl;
+            svgEl.querySelectorAll('g[id^="block-"]').forEach(g=>{
+                const path=g.querySelector('path'); if(!path) return;
+                const texts=Array.from(g.querySelectorAll('text')); const cnt=texts.length; if(cnt!==3&&cnt!==4) return;
+                const bb = getRootBBox(path, root); if(!bb) return;
+                const minX=bb.x, minY=bb.y, w=bb.width, h=bb.height; const maxX=minX+w, centerY=minY+h/2;
+                const subject=texts[0]?.textContent?.trim()||'', teacher=texts[1]?.textContent?.trim()||'', room=texts[2]?.textContent?.trim()||'';
+                const color=getFill(path);
+                let dayIdx=Math.floor((centerY-RECT.minY)/DAY_HEIGHT+0.001); dayIdx=Math.max(0,Math.min(4,dayIdx));
+                let startDiv=Math.round((minX-RECT.minX)/X_DIV); startDiv=Math.max(0,Math.min(8,startDiv));
+                let endDiv=Math.round((maxX-RECT.minX)/X_DIV); endDiv=Math.max(0,Math.min(8,endDiv));
+                blocks.push({minX,minY,maxX,width:w,height:h,textCount:cnt,subject,teacher,room,color,startDiv,endDiv,dayIdx});
+            });
+        } finally { document.body.removeChild(div); }
+        const classify = b => {
+            const h=b.height, cnt=b.textCount, cy=b.minY+h/2, dayTop=RECT.minY+b.dayIdx*DAY_HEIGHT;
+            if(Math.abs(h-DAY_HEIGHT)<=TOLERANCE && cnt===3) return {type:1,week:'C',group:0};
+            if(Math.abs(h-DAY_HEIGHT/2)<=TOLERANCE && cnt===3) { const half=Math.round((cy-dayTop)/(DAY_HEIGHT/2)-0.5); return {type:2,week:half===0?'A':'B',group:0}; }
+            if(Math.abs(h-DAY_HEIGHT/2)<=TOLERANCE && cnt===4) { const half=Math.round((cy-dayTop)/(DAY_HEIGHT/2)-0.5); return {type:3,week:'C',group:half===0?1:2}; }
+            if(Math.abs(h-DAY_HEIGHT/4)<=TOLERANCE && cnt===4) { const q=Math.round((cy-dayTop)/(DAY_HEIGHT/4)-0.5); const idx=Math.min(3,Math.max(0,q)); return {type:4,week:idx<=1?'A':'B',group:idx%2===0?1:2}; }
+            return {type:0,week:'',group:0};
+        };
+        blocks.forEach(b=>{const c=classify(b);b.type=c.type;b.week=c.week;b.group=c.group;});
+        blocks.sort((a,b)=>a.dayIdx-b.dayIdx||a.startDiv-b.startDiv||a.minY-b.minY);
+        return blocks.map(b=>`Start: ${b.startDiv}\nEnd: ${b.endDiv}\nDay: ${b.dayIdx}\nSubject: ${b.subject}\nRoom: ${b.room}\nClass: ${classLabel}\nTeacher: ${b.teacher}\nColor: ${b.color}\nType: ${b.type}\nWeek: ${b.week}\nGroup: ${b.group}`).join('\n\n');
+    }
+
+    async function processPDFBuffer(arrayBuffer, grade) {
+        const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+        const numPages = pdf.numPages; const pages = [];
+        for(let i=1;i<=numPages;i++){
+            const page = await pdf.getPage(i);
+            const rawSvg = await convertPageToRawSvg(page);
+            const bgSvg = await getBackgroundSvg(page);
+            const classLabel = detectClassFromSVG(rawSvg) || `${grade}?`;
+            pages.push({rawSvg, bgSvg, classLabel, grade, pageNum:i, report:null, recoloredSvg:null});
+        }
+        return pages;
+    }
+
+    async function processAllPages(pagesArray) {
+        if(pagesArray.length===0) throw new Error('No pages');
+        pagesArray.sort((a,b)=>{
+            if(a.grade!==b.grade) return a.grade - b.grade;
+            const aL=(a.classLabel||'').slice(-1).toUpperCase();
+            const bL=(b.classLabel||'').slice(-1).toUpperCase();
+            const ai=CLASS_LETTER_ORDER.indexOf(aL), bi=CLASS_LETTER_ORDER.indexOf(bL);
+            if(ai!==-1 && bi!==-1 && ai!==bi) return ai - bi;
+            if(ai!==-1 && bi===-1) return -1;
+            if(ai===-1 && bi!==-1) return 1;
+            return (a.classLabel||'').localeCompare(b.classLabel||'');
+        });
+        for(const p of pagesArray) {
+            const filtered = filterSVG(p.rawSvg);
+            const grouped = groupTextsInSVG(filtered);
+            const snapped = snapAndExtend(grouped.svgString);
+            const recolored = await recolorForegroundPaths(snapped, p.bgSvg);
+            p.recoloredSvg = recolored;
+            p.report = processSVGToReport(recolored, p.classLabel);
+            await new Promise(r => setTimeout(r,0));
+        }
+        return pagesArray;
+    }
+
+    function mergeNewPages(newPagesArray) {
+        const existingClasses = new Set(allLessons.map(l => l.className));
+        let addedCount=0, skippedCount=0; const newLessons=[];
+        for(const page of newPagesArray) {
+            if(page.report) {
+                const lessons = parseReport(page.report);
+                const classSet = new Set(lessons.map(l => l.className));
+                const alreadyHas = [...classSet].some(c => existingClasses.has(c));
+                if(alreadyHas) { skippedCount += lessons.length; continue; }
+                newLessons.push(...lessons); addedCount += lessons.length;
+            }
+        }
+        if(newLessons.length > 0) {
+            allLessons = sortLessonsByClassThenTime([...allLessons, ...newLessons]);
+            combinedReportText = generateCombinedReportFromLessons(allLessons);
+            reportInput.value = combinedReportText;
+        }
+        return { added: addedCount, skipped: skippedCount };
+    }
+
+    function generateCombinedReportFromLessons(lessons) {
+        const sorted = sortLessonsByClassThenTime(lessons);
+        return sorted.map(l => `Start: ${l.start}\nEnd: ${l.end}\nDay: ${l.day}\nSubject: ${l.subject}\nRoom: ${l.room}\nClass: ${l.className}\nTeacher: ${l.teacher}\nColor: ${l.color}\nType: ${l.type}\nWeek: ${l.week}\nGroup: ${l.group}`).join('\n\n');
+    }
+
+    async function fetchPDFViaNetlifyFunction(url) {
+        const response = await fetch(`/api/fetch-pdf?url=${encodeURIComponent(url)}`);
+        if (!response.ok) throw new Error(`Netlify function returned ${response.status}`);
+        return await response.arrayBuffer();
+    }
+
+    function getGradeFromFilename(filename) {
+        const match = filename.match(/(\d+)/);
+        if(match) { const n = parseInt(match[1]); if(n>=8 && n<=12) return n; }
+        return 0;
+    }
+
+    // ==================== EVENT LISTENERS ====================
+    selectPdfBtn.addEventListener('click', () => pdfFilesInput.click());
+    pdfFilesInput.addEventListener('change', () => {
+        const files = pdfFilesInput.files;
+        selectedPdfNames.textContent = files && files.length > 0 ? `Selected: ${Array.from(files).map(f=>f.name).join(', ')}` : '';
+    });
+
+    convertAllBtn.addEventListener('click', async () => {
+        const files = pdfFilesInput.files;
+        if(!files || files.length === 0) { setStatus('⚠️ No PDFs selected.', 'error'); return; }
+        const allPages = [];
+        convertAllBtn.disabled = true; progressWrap.style.display = 'block'; progressFill.style.width = '0%';
+        downloadCombinedBtn.style.display = 'none'; copyCombinedBtn.style.display = 'none'; downloadRecoloredBtn.style.display = 'none';
+        try {
+            for(let i=0; i<files.length; i++) {
+                const file = files[i]; const grade = getGradeFromFilename(file.name);
+                setStatus(`Processing ${file.name} (grade ${grade})...`, '');
+                const buf = await file.arrayBuffer(); const pages = await processPDFBuffer(buf, grade);
+                allPages.push(...pages);
+                progressFill.style.width = Math.round(((i+1)/files.length)*80) + '%';
+            }
+            if(allPages.length === 0) { setStatus('⚠️ No pages extracted.', 'error'); return; }
+            await processAllPages(allPages);
+            const result = mergeNewPages(allPages);
+            globalRecoloredSvgs = allPages.map(p => ({classLabel: p.classLabel, svg: p.recoloredSvg}));
+            showFiltersAndSchedule();
+            setStatus(`✅ Added ${result.added} lessons, skipped ${result.skipped}.`, 'success');
+        } catch(e) { setStatus('❌ Processing failed: ' + e.message, 'error'); }
+        finally {
+            convertAllBtn.disabled = false; progressWrap.style.display = 'none';
+            saveToStorage(); pdfFilesInput.value = ''; selectedPdfNames.textContent = '';
+        }
+    });
+
+    fetchOnlineBtn.addEventListener('click', async () => {
+        const grades = [8,9,10,11,12];
+        const urls = grades.map(g => ({grade:g, url: urlInputs[g].value.trim()})).filter(x => x.url);
+        if(urls.length===0) { setStatus('⚠️ No URLs entered.', 'error'); return; }
+        fetchOnlineBtn.disabled = true; onlineProgressWrap.style.display = 'block'; onlineProgressFill.style.width = '0%';
+        onlineDownloadCombinedBtn.style.display = 'none'; onlineCopyCombinedBtn.style.display = 'none'; onlineDownloadRecoloredBtn.style.display = 'none';
+        let allNewPages = []; let remaining = urls, attempt = 0; const maxAttempts = MAX_RETRIES + 1;
+        const doAttempt = async (items) => {
+            const results = await Promise.allSettled(items.map(async ({grade,url}) => {
+                const buf = await fetchPDFViaNetlifyFunction(url); const pages = await processPDFBuffer(buf, grade); return {grade, pages};
+            }));
+            const successes = [], failures = [];
+            results.forEach((res, idx) => { if(res.status==='fulfilled') successes.push(res.value); else failures.push(items[idx]); });
+            return { successes, failures };
+        };
+        while(remaining.length > 0 && attempt < maxAttempts) {
+            attempt++;
+            setStatus(`Attempt ${attempt}/${maxAttempts} – fetching ${remaining.length} grade(s)…`, '');
+            const { successes, failures } = await doAttempt(remaining);
+            remaining = failures;
+            for(const {pages} of successes) { allNewPages.push(...pages); }
+            onlineProgressFill.style.width = Math.round((attempt/maxAttempts)*80) + '%';
+            if(remaining.length > 0 && attempt < maxAttempts) await new Promise(r => setTimeout(r, RETRY_DELAY_MS));
+        }
+        if(allNewPages.length === 0) { setStatus('❌ Could not fetch any PDFs.', 'error'); fetchOnlineBtn.disabled = false; onlineProgressWrap.style.display = 'none'; return; }
+        try {
+            setStatus('⚙️ Processing pages…', '');
+            await processAllPages(allNewPages);
+            const mergeResult = mergeNewPages(allNewPages);
+            globalRecoloredSvgs = allNewPages.map(p => ({classLabel: p.classLabel, svg: p.recoloredSvg}));
+            showFiltersAndSchedule();
+            let msg = `✅ Added ${mergeResult.added} lessons.`; if(mergeResult.skipped > 0) msg += ` Skipped ${mergeResult.skipped}.`; if(remaining.length > 0) msg += ` ${remaining.length} grade(s) failed.`;
+            setStatus(msg, 'success');
+        } catch(e) { setStatus('❌ Processing failed: ' + e.message, 'error'); }
+        finally { fetchOnlineBtn.disabled = false; onlineProgressWrap.style.display = 'none'; saveToStorage(); }
+    });
+
+    function downloadReport() {
+        if(!combinedReportText) { setStatus('⚠️ No report.', 'error'); return; }
+        const blob = new Blob([combinedReportText], {type:'text/plain'}); const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob); a.download = 'combined_schedule.txt'; a.click();
+        setStatus('📄 Downloaded.', 'success');
+    }
+    async function copyReport() {
+        if(!combinedReportText) { setStatus('⚠️ No report.', 'error'); return; }
+        try { await navigator.clipboard.writeText(combinedReportText); setStatus('📋 Copied!', 'success'); }
+        catch { setStatus('❌ Copy failed.', 'error'); }
+    }
+    async function downloadRecoloredSvgs() {
+        if(!globalRecoloredSvgs.length) { setStatus('⚠️ No recolored SVGs.', 'error'); return; }
+        const zip = new JSZip();
+        globalRecoloredSvgs.forEach(({classLabel, svg}, i) => { zip.file(`overlay_${classLabel.replace(/[^\w]/g,'_')}_page${i+1}.svg`, svg); });
+        const blob = await zip.generateAsync({type:'blob'}); const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob); a.download = 'recolored_overlays.zip'; a.click();
+        setStatus('🎨 Recolored SVGs downloaded.', 'success');
+    }
+
+    downloadCombinedBtn.addEventListener('click', downloadReport);
+    copyCombinedBtn.addEventListener('click', copyReport);
+    downloadRecoloredBtn.addEventListener('click', downloadRecoloredSvgs);
+    onlineDownloadCombinedBtn.addEventListener('click', downloadReport);
+    onlineCopyCombinedBtn.addEventListener('click', copyReport);
+    onlineDownloadRecoloredBtn.addEventListener('click', downloadRecoloredSvgs);
+
+    parseBtn.addEventListener('click', handleParse);
+    loadFileBtn.addEventListener('click', () => {
+        const file = fileInput.files[0]; if(!file) { setStatus('No file selected.', 'error'); return; }
+        const reader = new FileReader();
+        reader.onload = e => { reportInput.value = e.target.result; setStatus('Loaded. Click Parse.', 'success'); saveToStorage(); };
+        reader.onerror = () => setStatus('Error reading file.', 'error');
+        reader.readAsText(file, 'UTF-8');
+    });
+    for(const r of viewTypeRadios) r.addEventListener('change', () => {
+        if (!r.checked) return;
+        const newType = r.value;
+        if (currentFilter.type === newType) return;
+        stashCurrentFilter();
+        applyTypeFilterToCurrent(newType);
+        applySavedFilterToUI();
+    });
+    nameSelect.addEventListener('change', updateSchedule);
+    nameSelect2.addEventListener('change', updateSchedule);
+    compareToggle.addEventListener('change', () => { currentFilter.compareMode = compareToggle.checked; updateSchedule(); });
+    groupSelect.addEventListener('change', updateSchedule);
+    groupSelect2.addEventListener('change', updateSchedule);
+    weekSelect.addEventListener('change', () => { weekManuallyChanged = true; updateSchedule(); });
+    reportInput.addEventListener('input', () => saveToStorage());
+
+    function setStatus(msg, type) {
+        importStatus.textContent = msg; importStatus.className = 'status-msg';
+        if(type==='error') importStatus.className = 'status-msg error';
+        if(type==='success') importStatus.className = 'status-msg success';
+    }
+
+    // ---------- Initialize ----------
+    initTheme();
+    loadFromStorage();
+    initCustomSelects();
+
+    const detectedWeek = getCurrentWeekType();
+    currentFilter.week = detectedWeek; weekSelect.value = detectedWeek; weekManuallyChanged = false;
+    for (const r of viewTypeRadios) r.checked = (r.value === currentFilter.type);
+    compareToggle.checked = currentFilter.compareMode;
+    secondScheduleSelect.style.display = currentFilter.compareMode ? '' : 'none';
+    scheduleSelectsContainer.classList.toggle('compare-active', currentFilter.compareMode);
+    toggleGroupVisibility();
+    updateWeekIndicator();
+    refreshAllCustomSelects();
+
+    if(allLessons.length > 0) {
+        showFiltersAndSchedule();
+        if(combinedReportText) {
+            downloadCombinedBtn.style.display = 'inline-flex'; copyCombinedBtn.style.display = 'inline-flex';
+            onlineDownloadCombinedBtn.style.display = 'inline-flex'; onlineCopyCombinedBtn.style.display = 'inline-flex';
+        }
+    } else {
+        setStatus('Paste text, upload PDFs, or fetch via URL.', '');
+    }
+    if(combinedReportText && !reportInput.value) reportInput.value = combinedReportText;
+})();
+</script>
+</body>
+</html>

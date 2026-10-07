@@ -1,0 +1,407 @@
+/* =====================================================================
+   Liquid Glass — layered translucent material over drifting light.
+
+   The look needs three things to read as "authentic":
+     1. Light behind the glass  → fixed aurora orbs on body::before/::after
+     2. Optics                  → blur + saturation via backdrop-filter,
+                                  specular rim highlights, diagonal sheen,
+                                  floating ambient shadow
+     3. Material response       → press lensing, hover brightness
+
+   Loaded last, so equal-specificity rules here override base/components/
+   schedule. Lesson-card ::before is reserved for the ▶ current marker,
+   so the sheen is done with layered background-image, not pseudos.
+   ===================================================================== */
+
+:root {
+    --bg: #05070d;
+    --glass-bg: rgba(255, 255, 255, 0.055);
+    --glass-bg-card: rgba(255, 255, 255, 0.075);
+    --glass-bg-strong: rgba(255, 255, 255, 0.095);
+    --glass-border: rgba(255, 255, 255, 0.16);
+    --glass-rim-light: rgba(255, 255, 255, 0.42);
+    --glass-rim-dark: rgba(2, 6, 16, 0.55);
+    --glass-sheen: linear-gradient(115deg,
+        rgba(255, 255, 255, 0.11) 0%,
+        rgba(255, 255, 255, 0.02) 26%,
+        rgba(255, 255, 255, 0) 52%,
+        rgba(255, 255, 255, 0.045) 100%);
+    --glass-shadow:
+        inset 0 1px 0 var(--glass-rim-light),
+        inset 0 -1px 0 var(--glass-rim-dark),
+        0 10px 34px rgba(2, 6, 16, 0.38),
+        0 2px 8px rgba(2, 6, 16, 0.22);
+    --glass-shadow-card:
+        inset 0 1px 0 var(--glass-rim-light),
+        inset 0 2px 0 rgba(255, 255, 255, 0.12),
+        inset 0 -1px 0 var(--glass-rim-dark),
+        0 6px 18px rgba(2, 6, 16, 0.28);
+    --input-well: rgba(6, 10, 20, 0.42);
+    --menu-bg: #14161d;
+    --glass-blur: 22px;
+    --glass-blur-card: 16px;
+    --orb-a: #2563eb;
+    --orb-b: #0ea5e9;
+    --orb-c: #8b5cf6;
+    --orb-d: #10b981;
+}
+body.light-mode {
+    --bg: #e8edf5;
+    --glass-bg: rgba(255, 255, 255, 0.4);
+    --glass-bg-card: rgba(255, 255, 255, 0.32);
+    --glass-bg-strong: rgba(255, 255, 255, 0.52);
+    --glass-border: rgba(255, 255, 255, 0.8);
+    --glass-rim-light: rgba(255, 255, 255, 0.95);
+    --glass-rim-dark: rgba(28, 39, 64, 0.16);
+    --glass-sheen: linear-gradient(115deg,
+        rgba(255, 255, 255, 0.5) 0%,
+        rgba(255, 255, 255, 0.12) 26%,
+        rgba(255, 255, 255, 0) 52%,
+        rgba(255, 255, 255, 0.22) 100%);
+    --glass-shadow:
+        inset 0 1px 0 var(--glass-rim-light),
+        inset 0 -1px 0 var(--glass-rim-dark),
+        0 10px 30px rgba(31, 45, 80, 0.14),
+        0 2px 6px rgba(31, 45, 80, 0.08);
+    --glass-shadow-card:
+        inset 0 1px 0 var(--glass-rim-light),
+        inset 0 -1px 0 var(--glass-rim-dark),
+        0 5px 14px rgba(31, 45, 80, 0.12);
+    --input-well: rgba(255, 255, 255, 0.66);
+    --menu-bg: #ffffff;
+    --orb-a: #6fb0ff;
+    --orb-b: #7de3f4;
+    --orb-c: #c9b8ff;
+    --orb-d: #86efc0;
+}
+
+/* ---------- Canvas: deep base + faint grain ---------- */
+html {
+    background: var(--bg);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.035 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+/* Light mode: the canvas must go light too — --bg resolves on :root,
+   outside body.light-mode's scope, so without this the dark canvas
+   peeks through between the orbs */
+html:has(body.light-mode) {
+    background-color: #e8edf5;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.03 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+/* Body must stay transparent: the z-index:-1 orbs paint between the
+   canvas background and body's background, so an opaque body would hide them */
+body { background: transparent; }
+
+/* ---------- The light behind the glass ---------- */
+body::before,
+body::after {
+    content: '';
+    position: fixed;
+    z-index: -1;
+    width: 150vmax;
+    height: 150vmax;
+    border-radius: 50%;
+    pointer-events: none;
+    will-change: transform;
+}
+body::before {
+    top: -55vmax;
+    left: -45vmax;
+    opacity: 0.85;
+    background:
+        radial-gradient(closest-side at 30% 30%, var(--orb-a) 0%, transparent 74%),
+        radial-gradient(closest-side at 72% 68%, var(--orb-c) 0%, transparent 68%);
+    animation: lg-drift-a 46s ease-in-out infinite alternate;
+}
+body::after {
+    bottom: -58vmax;
+    right: -48vmax;
+    opacity: 0.72;
+    background:
+        radial-gradient(closest-side at 35% 60%, var(--orb-d) 0%, transparent 72%),
+        radial-gradient(closest-side at 65% 30%, var(--orb-b) 0%, transparent 66%);
+    animation: lg-drift-b 58s ease-in-out infinite alternate;
+}
+body.light-mode::before { opacity: 0.9; }
+body.light-mode::after { opacity: 0.85; }
+@keyframes lg-drift-a {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to   { transform: translate3d(9vmax, 6vmax, 0) scale(1.15); }
+}
+@keyframes lg-drift-b {
+    from { transform: translate3d(0, 0, 0) scale(1.08); }
+    to   { transform: translate3d(-8vmax, -7vmax, 0) scale(0.95); }
+}
+@media (prefers-reduced-motion: reduce) {
+    body::before, body::after { animation: none; }
+}
+
+/* ---------- The material: panels ---------- */
+.import-section,
+.filter-section,
+.schedule-section,
+.settings-section {
+    background-color: var(--glass-bg);
+    background-image: var(--glass-sheen);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(170%);
+    backdrop-filter: blur(var(--glass-blur)) saturate(170%);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    border-radius: 18px;
+}
+
+/* ---------- The material: lesson cards (nested glass, lighter blur) ---------- */
+.lesson-card {
+    background-color: var(--glass-bg-card);
+    /* Diagonal sheen + a top-only light fade: the fade reads as overhead
+       light hitting the rim, separate from the colored side borders */
+    background-image:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 26%),
+        var(--glass-sheen);
+    -webkit-backdrop-filter: blur(var(--glass-blur-card)) saturate(160%);
+    backdrop-filter: blur(var(--glass-blur-card)) saturate(160%);
+    box-shadow: var(--glass-shadow-card);
+    border-radius: 14px;
+}
+body.light-mode .lesson-card { box-shadow: var(--glass-shadow-card); }
+@media (hover: hover) {
+    .lesson-card:hover { filter: brightness(1.12) saturate(1.08); }
+}
+
+/* ---------- Buttons: glass pills with press lensing ---------- */
+button {
+    background-color: var(--glass-bg-strong);
+    background-image: var(--glass-sheen);
+    border: 1px solid var(--glass-border);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    backdrop-filter: blur(12px) saturate(160%);
+    box-shadow:
+        inset 0 1px 0 var(--glass-rim-light),
+        0 4px 14px rgba(2, 6, 16, 0.25);
+    border-radius: 12px;
+    transition: transform 0.15s ease, filter 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+body.light-mode button {
+    box-shadow:
+        inset 0 1px 0 var(--glass-rim-light),
+        0 4px 10px rgba(31, 45, 80, 0.12);
+}
+button:hover { filter: brightness(1.08); }
+button:active {
+    transform: scale(0.97) translateY(1px);
+    filter: brightness(1.2);
+}
+.btn-sm { border-radius: 9px; }
+.btn-primary {
+    background-image: var(--glass-sheen);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.35),
+        0 6px 18px rgba(37, 99, 235, 0.35);
+}
+.tab-row { border-radius: 12px; }
+/* .tab-btn outranks the element-level button rule, so glass it explicitly
+   (.tab-btn.active keeps its solid accent — higher specificity still wins) */
+.tab-btn {
+    background-color: var(--glass-bg-strong);
+    background-image: var(--glass-sheen);
+}
+.tab-btn.active { background-image: var(--glass-sheen); }
+
+/* ---------- Theme toggle ---------- */
+.theme-toggle {
+    background-color: var(--glass-bg-strong);
+    background-image: var(--glass-sheen);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    backdrop-filter: blur(12px) saturate(160%);
+    border: 1px solid var(--glass-border);
+    box-shadow: inset 0 1px 0 var(--glass-rim-light);
+}
+
+/* ---------- Inputs: recessed wells ---------- */
+textarea,
+input[type="url"] {
+    background-color: var(--input-well);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--glass-border);
+    box-shadow: inset 0 2px 6px rgba(2, 6, 16, 0.25);
+    border-radius: 10px;
+}
+body.light-mode textarea,
+body.light-mode input[type="url"] {
+    box-shadow: inset 0 2px 6px rgba(31, 45, 80, 0.1);
+}
+
+/* ---------- Custom select: trigger well + glass dropdown ---------- */
+.custom-select-trigger {
+    background-color: var(--input-well);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--glass-border);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+}
+/* Dropdowns keep a SOLID background — translucent option lists cost more
+   readability than they earn */
+.custom-select-menu {
+    background-color: var(--menu-bg);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    border-radius: 12px;
+}
+
+/* ---------- Mobile bottom sheet: heavy glass slab ---------- */
+.mobile-select-backdrop {
+    background: rgba(0, 0, 0, 0.6);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+}
+.mobile-select-sheet {
+    background-color: var(--menu-bg);
+    background-image: var(--glass-sheen);
+    border: 1px solid var(--glass-border);
+    border-bottom: none;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.35),
+        0 -12px 48px rgba(2, 6, 16, 0.45);
+    border-top-left-radius: 26px;
+    border-top-right-radius: 26px;
+}
+/* Drag grabber — the small bar that says "sheet" */
+.mobile-select-sheet::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.28);
+}
+body.light-mode .mobile-select-sheet {
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+        0 -12px 40px rgba(31, 45, 80, 0.18);
+}
+body.light-mode .mobile-select-sheet::before { background: rgba(20, 30, 50, 0.22); }
+
+/* ---------- Settings panel ---------- */
+/* Hidden entirely when closed — the header pill carries the open state */
+.settings-section {
+    display: none;
+    margin-bottom: 16px;
+    padding: 6px;
+}
+.settings-section.open { display: block; }
+.settings-body { padding: 0 10px 10px; }
+.settings-group-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin: 10px 2px 8px;
+}
+.settings-body .import-section { margin-bottom: 12px; }
+.appearance-section .note { margin-top: 6px; }
+.appearance-label { font-size: 0.9rem; font-weight: 500; color: var(--text); }
+.settings-pill { display: inline-flex; align-items: center; gap: 5px; }
+.settings-pill .settings-caret {
+    font-size: 0.65rem;
+    opacity: 0.7;
+    transition: transform 0.2s;
+}
+.settings-pill.open .settings-caret { transform: rotate(180deg); }
+.settings-pill.open { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* ---------- Footer ---------- */
+.site-footer {
+    width: 100%;
+    max-width: 480px;
+    text-align: center;
+    padding: 28px 0 16px;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
+}
+
+/* =====================================================================
+   Glass off — plain black & white themes. Vars do most of the work;
+   the explicit rules below kill blur, sheen and the aurora.
+   ===================================================================== */
+body.glass-off::before,
+body.glass-off::after { display: none; }
+html:has(body.glass-off) { background: #000; background-image: none; }
+html:has(body.glass-off.light-mode) { background: #f5f5f5; }
+body.glass-off {
+    --bg: #000;
+    --glass-bg: #111;
+    --glass-bg-card: #000;
+    --glass-bg-strong: #2a2a2a;
+    --glass-border: #444;
+    --glass-rim-light: transparent;
+    --glass-rim-dark: transparent;
+    --glass-sheen: none;
+    --glass-shadow: none;
+    --glass-shadow-card: 0 2px 6px rgba(0, 0, 0, 0.2);
+    --input-well: #1a1a1a;
+    --menu-bg: #111;
+    background: #000;
+}
+body.glass-off.light-mode {
+    --bg: #f5f5f5;
+    --glass-bg: #ffffff;
+    --glass-bg-card: #ffffff;
+    --glass-bg-strong: #e0e0e0;
+    --glass-border: #ccc;
+    --glass-shadow-card: 0 2px 6px rgba(0, 0, 0, 0.1);
+    --input-well: #ffffff;
+    --menu-bg: #ffffff;
+    background: #f5f5f5;
+}
+body.glass-off .import-section,
+body.glass-off .filter-section,
+body.glass-off .schedule-section,
+body.glass-off .settings-section,
+body.glass-off .lesson-card,
+body.glass-off button,
+body.glass-off .theme-toggle,
+body.glass-off textarea,
+body.glass-off input[type="url"],
+body.glass-off .custom-select-trigger,
+body.glass-off .custom-select-menu,
+body.glass-off .mobile-select-sheet,
+body.glass-off .mobile-select-backdrop {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+}
+body.glass-off .lesson-card { background-image: none; }
+body.glass-off .mobile-select-sheet::before { display: none; }
+body.glass-off button,
+body.glass-off .btn-primary { box-shadow: none; }
+body.glass-off button:active { transform: none; filter: none; }
+
+/* ---------- Native controls polish ---------- */
+input[type="file"]::file-selector-button {
+    font: inherit;
+    border: 1px solid var(--glass-border);
+    border-radius: 9px;
+    padding: 6px 12px;
+    margin-right: 10px;
+    background-color: var(--glass-bg-strong);
+    color: var(--text);
+    cursor: pointer;
+}
+textarea::placeholder,
+input[type="url"]::placeholder {
+    color: var(--text-muted);
+    opacity: 0.9;
+}
+
+/* ---------- Typography polish ---------- */
+.import-header h2 { letter-spacing: -0.015em; }
+.day-header, .compare-day-header { letter-spacing: 0.1em; }
+.lesson-details { opacity: 1; }
+body.light-mode .status-msg.success { color: #047857; }
+body.light-mode .week-indicator { color: #047857; }
+body.light-mode .week-indicator .dot { background: #047857; }

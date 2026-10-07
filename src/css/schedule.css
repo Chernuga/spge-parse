@@ -1,0 +1,154 @@
+/* ===================== Schedule section ===================== */
+.schedule-section { background: var(--surface); border-radius: 12px; padding: 16px; border: 1px solid var(--border); transition: background 0.3s, border-color 0.3s; }
+.day-header { font-size: 1.05rem; font-weight: 600; margin: 14px 0 8px 0; padding-bottom: 4px; border-bottom: 1px solid var(--day-header-border); color: var(--text-secondary); text-transform: uppercase; }
+.day-header:first-child { margin-top: 0; }
+.compare-day-header { font-size: 1.05rem; font-weight: 600; margin: 0 0 8px 0; padding-bottom: 4px; border-bottom: 1px solid var(--day-header-border); color: var(--text-secondary); text-transform: uppercase; }
+.compare-day-row { margin-bottom: 20px; }
+
+/* ===== Lesson card ===== */
+.lesson-card {
+    background: var(--card-bg); border: 1px solid var(--card-border);
+    border-radius: 8px; color: var(--text);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    position: relative; transition: all 0.3s ease;
+    scroll-margin-top: 60px;
+}
+.lesson-card.current-lesson { border-left: 4px solid var(--lesson-color, #fbbf24) !important; animation: pulse-glow 2s ease-in-out infinite; }
+.lesson-card.current-lesson::before { content: '▶'; position: absolute; left: 3px; top: 50%; transform: translateY(-50%); color: var(--lesson-color, #fbbf24); font-size: 0.75rem; animation: arrow-text-pulse 2s ease-in-out infinite; }
+@keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 6px var(--lesson-color), 0 0 12px var(--lesson-color), 0 2px 6px rgba(0,0,0,0.2); } 50% { box-shadow: 0 0 12px var(--lesson-color), 0 0 24px var(--lesson-color), 0 2px 6px rgba(0,0,0,0.2); } }
+@keyframes arrow-text-pulse { 0%, 100% { text-shadow: 0 0 6px var(--lesson-color), 0 0 12px var(--lesson-color); } 50% { text-shadow: 0 0 12px var(--lesson-color), 0 0 24px var(--lesson-color); } }
+
+/* ===== Current-time line ===== */
+.current-time-line {
+    position: relative; height: 6px;
+    background: #fbbf24; border: none; border-radius: 3px;
+    animation: pulse-line 2s ease-in-out infinite;
+    scroll-margin-top: 60px;
+    margin: 18px 0 18px 24px;
+}
+.current-time-line::before { content: '▶'; position: absolute; left: -20px; top: 50%; transform: translateY(-50%); color: #fbbf24; font-size: 0.85rem; animation: arrow-text-pulse-line 2s ease-in-out infinite; }
+@keyframes pulse-line { 0%, 100% { box-shadow: 0 0 8px #fbbf24, 0 0 16px #fbbf24; } 50% { box-shadow: 0 0 16px #fbbf24, 0 0 32px #fbbf24; } }
+@keyframes arrow-text-pulse-line { 0%, 100% { text-shadow: 0 0 6px #fbbf24, 0 0 12px #fbbf24; } 50% { text-shadow: 0 0 12px #fbbf24, 0 0 24px #fbbf24; } }
+
+/* ===== Period-based grid ===== */
+.period-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(var(--period-count, 8), var(--period-height, 74px));
+    gap: 12px;
+    width: 100%;
+}
+.period-grid-compare {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 8px;
+}
+
+.period-cell { position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 4px; }
+.period-cell > .lesson-card {
+    width: 100%; height: 100%; flex: 1 1 auto; margin-bottom: 0;
+    overflow: hidden; overflow-wrap: break-word;
+    padding: 9px 12px;
+    display: flex; flex-direction: column; justify-content: flex-start;
+}
+.lesson-header { display: flex; align-items: baseline; justify-content: flex-start; gap: 8px; margin-bottom: 4px; }
+.lesson-subject { font-size: 1rem; font-weight: 700; line-height: 1.15; color: inherit; overflow-wrap: break-word; min-width: 0; flex: 0 1 auto; }
+.lesson-time { font-size: 0.8rem; font-weight: 500; opacity: 0.85; line-height: 1.1; white-space: nowrap; flex: 0 0 auto; font-variant-numeric: tabular-nums; }
+.lesson-details { display: flex; flex-wrap: wrap; gap: 3px 10px; font-size: 0.78rem; line-height: 1.2; opacity: 0.95; }
+.lesson-details.stacked { flex-direction: column; align-items: flex-start; gap: 2px; }
+.lesson-details span { display: flex; align-items: center; gap: 3px; overflow-wrap: break-word; min-width: 0; }
+.period-cell > .lesson-card.current-lesson { padding-left: 20px; }
+.period-cell > .lesson-card.current-lesson::before { left: 3px; font-size: 0.75rem; }
+
+/* ===== Filler card for empty time before the first lesson ===== */
+.period-cell > .lesson-card.filler-card {
+    background: transparent;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    color: var(--text-muted);
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 8px;
+    text-align: center;
+    overflow: hidden;
+    opacity: 0.7;
+}
+.filler-card .filler-time {
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+}
+.filler-card .filler-label {
+    font-size: 0.7rem;
+    font-style: italic;
+    opacity: 0.85;
+}
+
+/* ===== Marker row ===== */
+.period-marker {
+    position: relative;
+    align-self: center;
+    z-index: 3;
+    pointer-events: none;
+    min-height: 6px;
+}
+.period-marker > .current-time-line {
+    position: absolute;
+    left: 24px;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    margin: 0;
+    height: 6px;
+}
+.period-marker > .current-time-line::before { left: -22px; }
+.period-grid-compare .period-marker > .current-time-line { left: 14px; }
+.period-grid-compare .period-marker > .current-time-line::before { left: -12px; font-size: 0.7rem; }
+
+/* Bottom marker placed at the very top of the first period row that
+   follows a column's last lesson (compare mode). Sits flush against
+   the bottom edge of that column's last card. */
+.period-marker.period-marker-bottom {
+    align-self: start;
+}
+.period-marker.period-marker-bottom > .current-time-line {
+    top: 0;
+    transform: translateY(-50%);
+}
+
+.current-time-line.bottom-marker { margin: 14px 0 18px 24px; }
+.bottom-marker-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 8px;
+    margin-top: 12px;
+    margin-bottom: 6px;
+}
+.bottom-marker-cell { position: relative; min-height: 12px; }
+.bottom-marker-cell .current-time-line { margin: 0 0 0 14px; height: 5px; }
+.bottom-marker-cell .current-time-line::before { left: -12px; font-size: 0.7rem; }
+
+@media (max-width: 430px) {
+    .period-grid { --period-height: 80px; gap: 11px; }
+    .period-grid-compare { gap: 11px 6px; }
+    .period-cell > .lesson-card { padding: 7px 9px; display: flex; flex-direction: column; justify-content: flex-start; }
+    .lesson-header { gap: 6px; margin-bottom: 3px; }
+    .lesson-subject { font-size: 0.88rem; }
+    .lesson-time    { font-size: 0.72rem; }
+    .lesson-details { font-size: 0.7rem; gap: 2px 8px; }
+    .period-cell > .lesson-card.current-lesson { padding-left: 16px; }
+    .period-cell > .lesson-card.current-lesson::before { left: 2px; font-size: 0.68rem; }
+    .compare-day-header { font-size: 0.95rem; }
+    .period-marker > .current-time-line { left: 16px; }
+    .period-marker > .current-time-line::before { left: -14px; font-size: 0.7rem; }
+    .period-grid-compare .period-marker > .current-time-line { left: 10px; }
+    .period-grid-compare .period-marker > .current-time-line::before { left: -9px; font-size: 0.6rem; }
+    .filler-card .filler-time { font-size: 0.7rem; }
+    .filler-card .filler-label { font-size: 0.65rem; }
+}
+
+.light-mode .lesson-card { box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+.light-mode .current-time-line { background: #f59e0b; }

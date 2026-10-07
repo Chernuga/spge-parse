@@ -1,0 +1,46 @@
+/* ===================== Base / theme variables ===================== */
+:root {
+    --bg: #000; --surface: #111; --surface2: #1a1a1a; --border: #333;
+    --text: #fff; --text-muted: #aaa; --text-secondary: #ccc;
+    --input-bg: #1a1a1a; --input-border: #444;
+    --card-bg: #000; --card-border: #555;
+    --btn-bg: #2a2a2a; --btn-border: #555;
+    --accent: #2563eb; --accent-hover: #1d4ed8; --green: #22c55e;
+    --blue-bg: rgba(37,99,235,0.15); --green-bg: rgba(34,197,94,0.15);
+    --day-header-border: #333;
+    --schedule-label-a-color: #93c5fd; --schedule-label-b-color: #86efac;
+}
+body.light-mode {
+    --bg: #f5f5f5; --surface: #ffffff; --surface2: #f0f0f0; --border: #ddd;
+    --text: #111; --text-muted: #666; --text-secondary: #333;
+    --input-bg: #ffffff; --input-border: #ccc;
+    --card-bg: #ffffff; --card-border: #ddd;
+    --btn-bg: #e0e0e0; --btn-border: #bbb;
+    --blue-bg: #e8f0fe; --green-bg: #e8f5e9;
+    --day-header-border: #ccc;
+    --schedule-label-a-color: #1e40af; --schedule-label-b-color: #166534;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Sora', 'Inter', system-ui, sans-serif;
+    padding: 16px 12px; min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    transition: background 0.3s, color 0.3s;
+}
+.container { width: 100%; max-width: 480px; }
+
+button { background: var(--btn-bg); color: var(--text); border: 1px solid var(--btn-border); border-radius: 8px; padding: 10px 18px; font-weight: 500; font-size: 0.95rem; cursor: pointer; transition: background 0.2s, border-color 0.2s; }
+button:active { background: var(--accent-hover); }
+.btn-primary { background: var(--accent); border-color: var(--accent); font-weight: 600; color: #fff; }
+.btn-primary:disabled { background: #666; border-color: #777; color: #ccc; cursor: not-allowed; }
+.btn-sm { padding: 6px 12px; font-size: 0.78rem; border-radius: 6px; }
+
+.empty-state { text-align: center; padding: 30px; color: var(--text-muted); font-style: italic; }
+.status-msg { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; min-height: 1.3em; }
+.status-msg.error { color: #ef4444; font-weight: 500; }
+.status-msg.success { color: #22c55e; font-weight: 500; }
+.progress-bar-wrap { width: 100%; height: 4px; background: var(--border); border-radius: 2px; margin-top: 8px; overflow: hidden; display: none; }
+.progress-bar-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s; width: 0%; }
+.note { font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; line-height: 1.3; }

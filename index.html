@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+<title>Schedule Viewer – Period Grid</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="container">
+    <div class="import-header">
+        <h2>📋 Schedule Viewer</h2>
+        <button type="button" id="settingsToggle" class="theme-toggle settings-pill">⚙️ Settings<span class="settings-caret">▾</span></button>
+    </div>
+    <div class="settings-section" id="settingsSection">
+        <div class="settings-body">
+            <div class="settings-group-title">Import Data</div>
+            <div class="import-section">
+        <div class="tab-row">
+            <button class="tab-btn active" data-tab="text">📝 Text</button>
+            <button class="tab-btn" data-tab="pdf">📄 PDF</button>
+            <button class="tab-btn" data-tab="online">🌐 Online</button>
+        </div>
+        <div class="tab-panel active" id="panelText">
+            <textarea id="reportInput" spellcheck="false" placeholder="Paste your combined text report here..."></textarea>
+            <div class="file-upload">
+                <input type="file" id="fileInput" accept=".txt">
+                <button id="loadFileBtn" class="btn-primary btn-sm">Load .txt</button>
+            </div>
+            <button id="parseBtn" class="btn-primary" style="width:100%;">Parse & Show Filters</button>
+        </div>
+        <div class="tab-panel" id="panelPdf">
+            <div class="file-upload">
+                <button type="button" id="selectPdfBtn" class="btn-primary" style="width:100%;">📂 Select PDFs</button>
+                <input type="file" id="pdfFiles" multiple accept=".pdf" style="display:none;">
+                <div id="selectedPdfNames"></div>
+            </div>
+            <button id="convertAllBtn" class="btn-primary" style="width:100%;">🔁 Convert PDFs & Load</button>
+            <div class="progress-bar-wrap" id="progressWrap"><div class="progress-bar-fill" id="progressFill"></div></div>
+            <div class="btn-row" style="margin-top:8px;">
+                <button id="downloadCombinedBtn" class="btn-sm" style="display:none;">💾 Download Report</button>
+                <button id="copyCombinedBtn" class="btn-sm" style="display:none;">📋 Copy Report</button>
+                <button id="downloadRecoloredBtn" class="btn-sm" style="display:none;">🎨 Download Recolored SVGs (ZIP)</button>
+            </div>
+        </div>
+        <div class="tab-panel" id="panelOnline">
+            <div class="url-grid">
+                <div class="url-item"><label>8 клас</label><input type="url" id="url8" placeholder="https://..."></div>
+                <div class="url-item"><label>9 клас</label><input type="url" id="url9" placeholder="https://..."></div>
+                <div class="url-item"><label>10 клас</label><input type="url" id="url10" placeholder="https://..."></div>
+                <div class="url-item"><label>11 клас</label><input type="url" id="url11" placeholder="https://..."></div>
+                <div class="url-item"><label>12 клас</label><input type="url" id="url12" placeholder="https://..."></div>
+            </div>
+            <button id="fetchOnlineBtn" class="btn-primary" style="width:100%;">🌐 Fetch PDFs & Process</button>
+            <div class="progress-bar-wrap" id="onlineProgressWrap"><div class="progress-bar-fill" id="onlineProgressFill"></div></div>
+            <div class="note">⚠️ Fetches all grades simultaneously. Retries up to 3 times. New classes are added; existing ones are skipped. Press again to add more grades.</div>
+            <div class="btn-row" style="margin-top:8px;">
+                <button id="onlineDownloadCombinedBtn" class="btn-sm" style="display:none;">💾 Download Report</button>
+                <button id="onlineCopyCombinedBtn" class="btn-sm" style="display:none;">📋 Copy Report</button>
+                <button id="onlineDownloadRecoloredBtn" class="btn-sm" style="display:none;">🎨 Download Recolored SVGs (ZIP)</button>
+            </div>
+        </div>
+        <div id="importStatus" class="status-msg"></div>
+            </div>
+            <div class="settings-group-title">Appearance</div>
+            <div class="appearance-section">
+                <div class="compare-toggle-row">
+                    <span class="appearance-label">Theme</span>
+                    <button id="themeToggle" class="theme-toggle">🌙 Dark</button>
+                </div>
+                <div class="compare-toggle-row">
+                    <label><input type="checkbox" id="glassToggle" checked> ✨ Liquid Glass</label>
+                </div>
+                <div class="note">Turn off for the plain black &amp; white themes.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div id="filterSection" class="filter-section" style="display: none;">
+        <div class="radio-group">
+            <label><input type="radio" name="viewType" value="class" checked> Class</label>
+            <label><input type="radio" name="viewType" value="teacher"> Teacher</label>
+            <label><input type="radio" name="viewType" value="room"> Room</label>
+        </div>
+
+        <div class="compare-toggle-row">
+            <label><input type="checkbox" id="compareToggle"> 🔄 Compare Schedules</label>
+        </div>
+
+        <div id="scheduleSelectsContainer">
+            <div class="schedule-select-row" id="singleScheduleSelect">
+                <span class="compare-badge sched-a">A</span>
+                <div class="custom-select" data-select-id="nameSelect" data-mobile-title="Select"></div>
+                <div class="custom-select group-select" data-select-id="groupSelect" data-mobile-title="Select Group"></div>
+            </div>
+            <div class="schedule-select-row" id="secondScheduleSelect" style="display:none;">
+                <span class="compare-badge sched-b">B</span>
+                <div class="custom-select" data-select-id="nameSelect2" data-mobile-title="Compare with"></div>
+                <div class="custom-select group-select" data-select-id="groupSelect2" data-mobile-title="Select Group"></div>
+            </div>
+        </div>
+
+        <div class="custom-select" data-select-id="weekSelect" data-mobile-title="Select Week"></div>
+        <div id="weekIndicator" class="week-indicator" style="display:none;">
+            <span class="dot"></span> <span id="weekIndicatorText"></span>
+        </div>
+
+        <!-- Hidden native selects (source of truth for the rest of the JS) -->
+        <select id="nameSelect" class="hidden-native"></select>
+        <select id="nameSelect2" class="hidden-native"></select>
+        <select id="groupSelect" class="hidden-native">
+            <option value="A">Group A</option>
+            <option value="B">Group B</option>
+        </select>
+        <select id="groupSelect2" class="hidden-native">
+            <option value="A">Group A</option>
+            <option value="B">Group B</option>
+        </select>
+        <select id="weekSelect" class="hidden-native">
+            <option value="A">Week A</option>
+            <option value="B">Week B</option>
+        </select>
+    </div>
+
+    <!-- Schedule output -->
+    <div id="scheduleSection" class="schedule-section" style="display: none;"></div>
+</div>
+<footer class="site-footer">This website was entirely made by Chernuga.</footer>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
